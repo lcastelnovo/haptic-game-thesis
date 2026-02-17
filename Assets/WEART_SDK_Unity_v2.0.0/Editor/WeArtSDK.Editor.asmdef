@@ -1,0 +1,19 @@
+{
+    "name": "WeArtSDK.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:30a13dc5517d8d44b9724f5d3339cfa6",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

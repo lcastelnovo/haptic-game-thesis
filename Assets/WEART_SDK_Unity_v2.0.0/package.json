@@ -1,0 +1,29 @@
+{
+  "name": "com.weart.sdk",
+  "displayName": "WEART SDK",
+  "version": "2.0.0",
+  "unity": "2021.3",
+  "description": "WEART SDK - 2.0.0 (Android and PC) Supporting TouchDIVER and TouchDIVER Pro",
+  "documentationUrl": "https://weart.it/docs/sdkunity/2.0.0/",
+  "keywords": [
+    "WEART",
+    "Unity"
+  ],
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6"
+  },
+  "category": "Unity",
+  "samples": [
+    {
+      "displayName": "Simple Temperature",
+      "description": "This sample contains a very basic scene with one Touchable Cube and one finger Haptic Object for testing actuation",
+      "path": "Samples~/SimpleTemperature"
+    },
+    {
+      "displayName": "Sample Demo",
+      "description": "This sample contains a ready to use demo with multiple interactions",
+      "path": "Samples~/SampleDemo"
+    }
+  ],
+  "type": "library"
+}

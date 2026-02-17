@@ -1,0 +1,77 @@
+.unity-inspector-element SliderWithInputField {
+    flex-grow: 1;
+}
+
+.unity-inspector-element SliderWithInputField Label {
+    margin-right: 3px;
+}
+
+.unity-inspector-element SliderWithInputField TextField {
+    width: 50px;
+    height: 20px;
+    margin: 0px 0px 0px 4px;
+}
+
+.unity-inspector-element FloatField {
+    min-width: 50px;
+}
+
+#WeArtHapticObjectEditor #Logo {
+    max-height: 50px;
+    margin: 10px;
+}
+
+.horizontal {
+    flex-direction: row;
+}
+
+.propertyRow {
+    flex-direction: row;
+    margin: 1px 3px;
+}
+
+.propertyRow.toggled Toggle {
+    align-items: flex-start;
+    padding-top: 2px;
+    margin-left: 0px;
+    margin-right: 6px;
+}
+
+.propertyRow.toggled .unity-base-field__label {
+    min-width: 130px;
+}
+
+.propertyRow.toggled PropertyField Label {
+    display: none;
+}
+
+ObjectField.propertyRow {
+    flex-shrink: 1;
+    flex-grow: 1;
+}
+
+ObjectField.propertyRow .unity-base-field__input {
+    margin: 0px 3px;
+}
+
+.header {
+    -unity-font-style: bold;
+    margin: 10px 0px 4px 2px;
+}
+
+.unity-property-field {
+    flex-grow: 1;
+}
+
+.texture-preview {
+    margin-right: 10px;
+    width: 45px;
+    height: 45px;
+    background-color: black;
+    flex-shrink: 0;
+}
+
+.texture-image-container .unity-base-field__input {
+    width: 65px;
+    flex-grow: 1;
+}

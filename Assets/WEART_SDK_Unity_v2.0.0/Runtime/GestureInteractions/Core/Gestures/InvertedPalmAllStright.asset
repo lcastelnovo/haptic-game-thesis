@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c33034ad2aa03a74bb6f67b7f11e420b, type: 3}
+  m_Name: InvertedPalmAllStright
+  m_EditorClassIdentifier: 
+  gestureName: 1
+  thumbData:
+    ignore: 1
+    closure: 0
+    abduction: 0
+  indexData:
+    ignore: 0
+    closure: 0
+    abduction: 0
+  middleData:
+    ignore: 0
+    closure: 0
+    abduction: 0
+  annularData:
+    ignore: 1
+    closure: 0
+    abduction: 0
+  pinkyData:
+    ignore: 1
+    closure: 0
+    abduction: 0
+  ignoreHandRotation: 0
+  ignoreXHandRotation: 1
+  ignoreYHandRotation: 1
+  ignoreZHandRotation: 0
+  handRotation: {x: 0, y: 0, z: 150}
