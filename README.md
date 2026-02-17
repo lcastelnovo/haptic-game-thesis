@@ -1,5 +1,6 @@
 # Prototipo 2.5D VR Experience 
-## Descrizione Prototipo di ambiente virtuale sviluppato con Unity, progettato per persone non vedenti. 
+## Descrizione 
+Prototipo di ambiente virtuale sviluppato con Unity, progettato per persone non vedenti. 
 Il prototipo è utilizzabile tramite **mouse e tastiera** e può essere successivamente integrato con i **guanti aptici WeArt**. 
 
 Tutte le interazioni, movimenti e rotazioni della mano sono già implementati negli script inclusi. 
