@@ -28,11 +28,11 @@ public class GrabbableObject : MonoBehaviour, IGrabbable
         initialRotation = transform.rotation;
 
         rb.mass = 1f;
-        rb.drag = 0.5f;
-        rb.angularDrag = 0.05f;
+        rb.linearDamping = 0.5f;
+        rb.angularDamping = 0.05f;
         rb.useGravity = true;
 
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
     }
 
