@@ -90,3 +90,13 @@ InitTestScene*.unity*
 
 # Ignora VSCode
 .vscode/
+
+.idea/
+
+# WEART SDK
+/[Pp]ackages/WEART-UNITY-SDK*/
+
+# Ignora tutti i file .meta
+*.meta
+
+

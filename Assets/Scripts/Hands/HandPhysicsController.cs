@@ -37,8 +37,8 @@ public class HandPhysicsController : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         rb.useGravity = false;
-        rb.drag = 12f;
-        rb.angularDrag = 999f;
+        rb.linearDamping = 12f;
+        rb.angularDamping = 999f;
         rb.constraints = RigidbodyConstraints.FreezeRotation;
 
 
