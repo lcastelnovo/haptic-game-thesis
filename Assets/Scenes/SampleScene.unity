@@ -2236,8 +2236,8 @@ MonoBehaviour:
     _value: 0.998
     _active: 1
   _stiffness:
-    _value: 0
-    _active: 0
+    _value: 0.7
+    _active: 1
   _texture:
     _textureType: 20
     _active: 1
@@ -3527,7 +3527,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
       propertyPath: _temperature._active
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6458957286640259432, guid: d96bc87e105609845a567ed410265443, type: 3}
       propertyPath: m_Enabled
@@ -6360,7 +6360,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6481126835835948667, guid: eb9bee0a621db6e45a136be529f748eb, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6481126835835948667, guid: eb9bee0a621db6e45a136be529f748eb, type: 3}
       propertyPath: _deviceFirst
@@ -6376,7 +6376,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6481126835835948667, guid: eb9bee0a621db6e45a136be529f748eb, type: 3}
       propertyPath: _startCalibrationAutomatically
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
