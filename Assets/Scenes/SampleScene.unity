@@ -3526,6 +3526,18 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _force._value
+      value: 0.501
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _force._active
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _temperature._value
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
       propertyPath: _temperature._active
       value: 1
       objectReference: {fileID: 0}
@@ -3710,6 +3722,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1645261014}
+    - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1645261021}
     - targetCorrespondingSourceObject: {fileID: 5115586883562200619, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 21351610}
@@ -4338,6 +4353,21 @@ MonoBehaviour:
   grabPoint: {fileID: 1823409964}
   grabRadius: 0.05
   rotationStep: 90
+--- !u!114 &1645261021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1645260977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8636f715afa4341429bf8b7dee0b39ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeArtHapticBridge
+  handCollision: {fileID: 0}
+  coldTemperature: 0.2
+  forceIntensity: 0.7
 --- !u!1 &1659220091 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
