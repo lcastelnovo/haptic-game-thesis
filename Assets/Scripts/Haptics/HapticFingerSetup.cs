@@ -32,6 +32,8 @@ public class HapticFingerSetup : MonoBehaviour
 
     void Awake()
     {
+        triggerRadius = 0.03f; // blindato come HandColliderPart.touchDistance
+
         var handCollision = GetComponent<HandCollisionController>();
 
         HandSideFlags handSideFlag = handCollision.handSide == HandCollisionController.HandSide.Left
@@ -84,7 +86,10 @@ public class HapticFingerSetup : MonoBehaviour
         foreach (var haptic in createdHapticObjects)
         {
             if (haptic != null)
+            {
                 haptic.EnablingActuating(true);
+                haptic.UpdateEffects(); // re-invia stato se il dito è già in contatto
+            }
         }
     }
 }
