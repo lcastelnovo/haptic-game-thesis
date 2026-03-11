@@ -1,4 +1,5 @@
 using UnityEngine;
+using WeArt.Components;
 
 public class HandCloseController : MonoBehaviour
 {
@@ -12,39 +13,54 @@ public class HandCloseController : MonoBehaviour
     [HideInInspector]
     public bool isActive = true;
 
+    [Header("Tracking guanto WEART (opzionale)")]
+    [Tooltip("WeArtThimbleTrackingObject per ogni dito, stesso ordine di fingers[]")]
+    public WeArtThimbleTrackingObject[] fingerTracking;
+    public WeArtThimbleTrackingObject thumbTracking;
+
     void Start()
     {
         // inizializza array con numero dita + pollice
-        closeAmounts = new float[fingers.Length + 1]; 
+        closeAmounts = new float[fingers.Length + 1];
     }
 
     void Update()
     {
         if (!isActive) return;
 
-        // Selezione dito con numeri
-        if (Input.GetKeyDown(KeyCode.Alpha0)) selectedFinger = 0; // tutte le dita
-        if (Input.GetKeyDown(KeyCode.Alpha1)) selectedFinger = 1;
-        if (Input.GetKeyDown(KeyCode.Alpha2)) selectedFinger = 2;
-        if (Input.GetKeyDown(KeyCode.Alpha3)) selectedFinger = 3;
-        if (Input.GetKeyDown(KeyCode.Alpha4)) selectedFinger = 4;
-        if (Input.GetKeyDown(KeyCode.Alpha5)) selectedFinger = 5; // pollice
-
-        // Scroll mouse per chiusura/apertura
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll != 0f)
+        if (IsGloveTrackingActive())
         {
-            float delta = scroll; // puoi moltiplicare per velocità se vuoi
-            if (selectedFinger == 0)
+            // Usa dati reali dal guanto
+            for (int i = 0; i < fingers.Length; i++)
             {
-                // tutte le dita
-                for (int i = 0; i < closeAmounts.Length; i++)
-                    closeAmounts[i] = Mathf.Clamp01(closeAmounts[i] + delta);
+                if (i < fingerTracking.Length && fingerTracking[i] != null)
+                    closeAmounts[i] = fingerTracking[i].Closure.Value;
             }
-            else
+            if (thumbTracking != null)
+                closeAmounts[closeAmounts.Length - 1] = thumbTracking.Closure.Value;
+        }
+        else
+        {
+            // Fallback: tastiera + scroll
+            if (Input.GetKeyDown(KeyCode.Alpha0)) selectedFinger = 0; // tutte le dita
+            if (Input.GetKeyDown(KeyCode.Alpha1)) selectedFinger = 1;
+            if (Input.GetKeyDown(KeyCode.Alpha2)) selectedFinger = 2;
+            if (Input.GetKeyDown(KeyCode.Alpha3)) selectedFinger = 3;
+            if (Input.GetKeyDown(KeyCode.Alpha4)) selectedFinger = 4;
+            if (Input.GetKeyDown(KeyCode.Alpha5)) selectedFinger = 5; // pollice
+
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll != 0f)
             {
-                // dito selezionato
-                closeAmounts[selectedFinger - 1] = Mathf.Clamp01(closeAmounts[selectedFinger - 1] + delta);
+                if (selectedFinger == 0)
+                {
+                    for (int i = 0; i < closeAmounts.Length; i++)
+                        closeAmounts[i] = Mathf.Clamp01(closeAmounts[i] + scroll);
+                }
+                else
+                {
+                    closeAmounts[selectedFinger - 1] = Mathf.Clamp01(closeAmounts[selectedFinger - 1] + scroll);
+                }
             }
         }
 
@@ -53,5 +69,14 @@ public class HandCloseController : MonoBehaviour
             fingers[i].closeAmount = closeAmounts[i];
 
         thumb.closeAmount = closeAmounts[closeAmounts.Length - 1];
+    }
+
+    // Il tracking è attivo se il middleware è connesso e almeno un tracking object è assegnato
+    private bool IsGloveTrackingActive()
+    {
+        if (WeArtController.Instance == null || WeArtController.Instance.Client == null)
+            return false;
+        bool hasFingerTracking = fingerTracking != null && fingerTracking.Length > 0;
+        return hasFingerTracking || thumbTracking != null;
     }
 }
