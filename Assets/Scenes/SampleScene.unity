@@ -2233,17 +2233,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: WeArtSDK.Runtime::WeArt.Components.WeArtTouchableObject
   _temperature:
-    _value: 0.998
+    _value: 0.075
     _active: 1
   _stiffness:
-    _value: 0
-    _active: 0
+    _value: 0.7
+    _active: 1
   _texture:
     _textureType: 20
-    _active: 1
+    _active: 0
     _forcedVelocity: 0
     _volume: 100
-  _graspable: 1
+  _graspable: 0
   _surfaceExploration: 0
   _graspingType: 0
   _disableDynamicForce: 0
@@ -3385,6 +3385,37 @@ MonoBehaviour:
   maxIntermediateAngle: 90
   maxDistalAngle: 90
   closeAmount: 0
+--- !u!1 &1162785489 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6178654280898765402, guid: d96bc87e105609845a567ed410265443, type: 3}
+  m_PrefabInstance: {fileID: 1165261152}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1162785493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1162785489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5bd4422028e072d4189e8fb6b0b0afab, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticFingerSetup
+  triggerRadius: 1
+--- !u!114 &1162785494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1162785489}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b19e0d475783c3428e692851422f812, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandCollisionController
+  handSide: 0
 --- !u!1001 &1165261152
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3526,12 +3557,24 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
-      propertyPath: _temperature._active
+      propertyPath: _force._value
+      value: 0.501
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _force._active
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _temperature._value
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6369397669292681486, guid: d96bc87e105609845a567ed410265443, type: 3}
+      propertyPath: _temperature._active
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6458957286640259432, guid: d96bc87e105609845a567ed410265443, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6613076609662795721, guid: d96bc87e105609845a567ed410265443, type: 3}
       propertyPath: m_Enabled
@@ -3710,6 +3753,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1645261014}
+    - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1645261028}
     - targetCorrespondingSourceObject: {fileID: 5115586883562200619, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 21351610}
@@ -3770,6 +3816,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6773701316575670448, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2049936032}
+    - targetCorrespondingSourceObject: {fileID: 6178654280898765402, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1162785494}
+    - targetCorrespondingSourceObject: {fileID: 6178654280898765402, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1162785493}
   m_SourcePrefab: {fileID: 100100000, guid: d96bc87e105609845a567ed410265443, type: 3}
 --- !u!1 &1180657233 stripped
 GameObject:
@@ -4310,6 +4362,8 @@ MonoBehaviour:
   thumb: {fileID: 1716519945}
   closeAmounts: []
   isActive: 1
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
 --- !u!114 &1645261000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4338,6 +4392,19 @@ MonoBehaviour:
   grabPoint: {fileID: 1823409964}
   grabRadius: 0.05
   rotationStep: 90
+--- !u!114 &1645261028
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1645260977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f0c58f7e0ae0cd4aa213392f329f011, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeArtTrackingSetup
+  fingerActuationPoints: 02000000030000000500000006000000
 --- !u!1 &1659220091 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
@@ -4368,6 +4435,8 @@ MonoBehaviour:
   thumb: {fileID: 193569298}
   closeAmounts: []
   isActive: 1
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
 --- !u!114 &1659220100
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6360,7 +6429,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6481126835835948667, guid: eb9bee0a621db6e45a136be529f748eb, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6481126835835948667, guid: eb9bee0a621db6e45a136be529f748eb, type: 3}
       propertyPath: _deviceFirst
