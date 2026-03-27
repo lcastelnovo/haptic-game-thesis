@@ -8,6 +8,7 @@ public class HandGrabController : MonoBehaviour
     public float rotationStep = 90f; // Step di rotazione
 
     private IGrabbable currentGrabbable;
+    public IGrabbable CurrentGrabbable => currentGrabbable;
 
     void Update()
     {
@@ -27,6 +28,10 @@ public class HandGrabController : MonoBehaviour
 
     void TryInteract()
     {
+        // Se GloveGrabController ha già afferrato, non interferire
+        var gloveGrab = GetComponent<GloveGrabController>();
+        if (gloveGrab != null && gloveGrab.CurrentGrabbable != null) return;
+
         Collider[] hits = Physics.OverlapSphere(grabPoint.position, grabRadius);
         if (hits.Length == 0)
             Debug.Log("Nessun collider rilevato nel raggio");
