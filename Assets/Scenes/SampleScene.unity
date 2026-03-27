@@ -2188,7 +2188,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.00764, y: 0.8896, z: -0.12122}
-  m_LocalScale: {x: 0.07372048, y: 0.07372048, z: 0.07372048}
+  m_LocalScale: {x: 0.04961093, y: 0.04961093, z: 0.04961093}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -2243,7 +2243,7 @@ MonoBehaviour:
     _active: 0
     _forcedVelocity: 0
     _volume: 100
-  _graspable: 0
+  _graspable: 1
   _surfaceExploration: 0
   _graspingType: 0
   _disableDynamicForce: 0
@@ -3756,6 +3756,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1645261028}
+    - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1645261035}
     - targetCorrespondingSourceObject: {fileID: 5115586883562200619, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 21351610}
@@ -4405,6 +4408,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeArtTrackingSetup
   fingerActuationPoints: 02000000030000000500000006000000
+--- !u!114 &1645261035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1645260977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fc4567597cc8ab849be04114f10a38cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GloveGrabController
+  closeController: {fileID: 0}
+  collisionController: {fileID: 0}
+  handGrabController: {fileID: 0}
+  closureThreshold: 0.6
+  releaseThreshold: 0.3
+  minFingersToGrab: 2
 --- !u!1 &1659220091 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
