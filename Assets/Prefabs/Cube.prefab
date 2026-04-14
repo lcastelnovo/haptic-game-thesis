@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 1097599926141999570}
   - component: {fileID: 1931841827999850755}
   - component: {fileID: 4794498196066754502}
+  - component: {fileID: 630701433504746371}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -63,6 +64,11 @@ MeshRenderer:
   m_ReflectionProbeUsage: 1
   m_RayTracingMode: 2
   m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -84,9 +90,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &2470877406261171907
 BoxCollider:
@@ -133,10 +141,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4620611176648045198}
-  serializedVersion: 4
+  serializedVersion: 5
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -164,6 +172,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -266,3 +275,42 @@ MonoBehaviour:
   touchableSound: {fileID: 8300000, guid: 21707d1bdf5cf9243aa32f7d7cef3aae, type: 3}
   tableSound: {fileID: 8300000, guid: a2297308a14323548bcf5b3213a247ca, type: 3}
   defaultSound: {fileID: 8300000, guid: da759c6ba8fff9f40a519410a4f5aba1, type: 3}
+--- !u!114 &630701433504746371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4620611176648045198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 818fa9d7ef9470c4fabaccf234366b3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: WeArtSDK.Runtime::WeArt.Components.WeArtTouchableObject
+  _temperature:
+    _value: 0.2
+    _active: 1
+  _stiffness:
+    _value: 0.7
+    _active: 1
+  _texture:
+    _textureType: 0
+    _active: 0
+    _forcedVelocity: 0
+    _volume: 100
+  _graspable: 1
+  _surfaceExploration: 0
+  _graspingType: 0
+  _disableDynamicForce: 0
+  OnGraspReady:
+    m_PersistentCalls:
+      m_Calls: []
+  OnGraspNotReady:
+    m_PersistentCalls:
+      m_Calls: []
+  OnGrasp:
+    m_PersistentCalls:
+      m_Calls: []
+  OnRelease:
+    m_PersistentCalls:
+      m_Calls: []
