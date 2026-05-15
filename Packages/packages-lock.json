@@ -221,7 +221,7 @@
       "url": "https://packages.unity.com"
     },
     "com.weart.sdk": {
-      "version": "file:C:/Users/luca_/Unity/haptic-game-thesis/Packages/WEART-UNITY-SDK_v2.1.5_preview/WEART-UNITY-SDK",
+      "version": "file:WEART_SDK_Unity_v2.3.0/WEART-UNITY-SDK",
       "depth": 0,
       "source": "local",
       "dependencies": {
