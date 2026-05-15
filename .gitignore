@@ -95,6 +95,7 @@ InitTestScene*.unity*
 
 # WEART SDK
 /[Pp]ackages/WEART-UNITY-SDK*/
+/[Pp]ackages/WEART_SDK_Unity_v2.3.0/
 
 # Claude Code
 .claude/

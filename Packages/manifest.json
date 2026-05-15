@@ -12,7 +12,7 @@
     "com.unity.timeline": "1.8.10",
     "com.unity.ugui": "2.0.0",
     "com.unity.visualscripting": "1.9.9",
-    "com.weart.sdk": "file:C:/Users/luca_/Unity/haptic-game-thesis/Packages/WEART-UNITY-SDK_v2.1.5_preview/WEART-UNITY-SDK",
+    "com.weart.sdk": "file:WEART_SDK_Unity_v2.3.0/WEART-UNITY-SDK",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
