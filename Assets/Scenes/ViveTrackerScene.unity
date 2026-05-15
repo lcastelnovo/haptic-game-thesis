@@ -1358,8 +1358,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4ded713d0fff6b4188bca1e05ac29bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  leftTrackerSerial: LHR-EB0E031E
-  rightTrackerSerial: LHR-D665E187
+  leftTrackerSerial: LHR-C952B5DD
+  rightTrackerSerial: LHR-3EBD9B28
   leftTrackerTarget: {fileID: 217323622}
   rightTrackerTarget: {fileID: 1473429866}
   trackingRoot: {fileID: 346546422}
