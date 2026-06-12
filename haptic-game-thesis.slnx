@@ -1,0 +1,10 @@
+﻿<Solution>
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="WeArtSDK.Runtime.csproj" />
+  <Project Path="SteamVR_Input_Editor.csproj" />
+  <Project Path="SteamVR.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="WeArtSDK.Editor.csproj" />
+  <Project Path="SteamVR_Editor.csproj" />
+  <Project Path="SteamVR_Windows_EditorHelper.csproj" />
+</Solution>

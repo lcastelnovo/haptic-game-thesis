@@ -1,94 +1,278 @@
-# CLAUDE.md
+# Haptic Research – Unity VR Experiment
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Progetto di ricerca UniBS (tesi) sull'uso di feedback aptico (Weart TouchDIVER Pro) per
+supportare la percezione tattile in VR per utenti non vedenti e ipovedenti.
 
-## Project Overview
+Si parte da un prototipo desktop (top-down su tavolo, mani simulate) e si sta migrando a
+VR nativo con OpenXR + SteamVR e tracking opzionale via Vive Tracker.
 
-Unity 6 (6000.3.10f1) haptic thesis project — a tactile learning experience combining hand simulation, braille reading, and object manipulation with haptic feedback via WEART glove SDK. Desktop standalone target.
+## Stack
+
+- Unity **6000.3.15f1**
+- URP 17.3.0 — renderer separati PC/Mobile in `Assets/Settings/`
+- New Input System 1.19.0 — action map in `Assets/InputSystem_Actions.inputactions`
+- OpenXR 1.16.1 + SteamVR/OpenVR (pacchetto locale in `Assets/SteamVR/OpenVRUnityXRPackage/`)
+- Vive Tracker 3.0 (opzionale, per oggetti reali)
+- WEART Unity SDK **v2.3.0** in `Packages/WEART-UNITY-SDK/` (referenziato come pacchetto
+  locale in `Packages/manifest.json`). La cartella
+  `Assets/WEART-UNITY-SDK_v2.1.5_preview/` è residuo della versione vecchia, da rimuovere
+- Target: PC VR (Quest via Link, Valve Index, Varjo) + fallback desktop standalone
 
 ## Build & Run
 
-This is a standard Unity project. Open it in Unity 6.0.3f1 (Hub or CLI). There are no custom build scripts, Makefiles, or CI/CD pipelines.
+Niente CI, niente Makefile. Aprire da Unity Hub.
 
-- **Open project:** Unity Hub → Add → select this directory
-- **Main scene:** `Assets/Scenes/SampleScene.unity`
-- **Build:** File → Build Settings → Build (PC Standalone)
-- **Test framework:** `com.unity.test-framework` v1.6.0 is installed but no tests are configured yet
+- Scene principali: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/ViveTrackerScene.unity`
+  (la `old.unity` è vecchia, da non toccare salvo recupero asset)
+- Build: File → Build Settings → PC Standalone
+- Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
+  middleware il gioco gira ma forza/temperatura/texture non escono
+- Runtime VR richiede SteamVR avviato (per OpenVR) oppure Quest Link / OpenXR runtime
+- `com.unity.test-framework` v1.6.0 è installato ma non ci sono ancora test
+
+## Setup SteamVR senza HMD (prima volta su una macchina nuova)
+
+I Vive Tracker funzionano senza visore, ma serve abilitare il **null driver** di SteamVR.
+Una volta sola per macchina.
+
+1. `C:\Program Files (x86)\Steam\steamapps\common\SteamVR\drivers\null\resources\settings\default.vrsettings`
+   - `"driver_null".enable` → `true`
+2. `C:\Program Files (x86)\Steam\steamapps\common\SteamVR\resources\settings\default.vrsettings`
+   - `"steamvr".requireHmd` → `false`
+   - `"steamvr".forcedDriver` → `"null"`
+   - `"steamvr".forcedHmd` → `false`
+   - `"steamvr".activateMultipleDrivers` → `true`
+3. Riavviare SteamVR.
+
+XR Plug-in Management nel progetto è già configurato — non toccare i loader senza
+coordinarsi.
+
+**Hardware:**
+- Accendere i Vive Tracker, collegare i dongle USB al PC, posizionare le base station
+  in alto con linea di vista libera ai tracker. Se la linea di vista si perde, il
+  tracking si ferma finché non torna valida
+- Pairing tracker: https://www.vive.com/us/support/tracker3/category_howto/pairing-vive-tracker.html
+- Base station: https://www.vive.com/us/support/vive-pro/category_howto/installing-the-base-stations.html
+- Le base station NON si connettono al PC: sparano solo i laser. I tracker comunicano
+  via dongle e informano SteamVR della loro esistenza
+
+## Principi non negoziabili
+
+1. **Accessibilità prima di tutto.** L'esperienza deve funzionare *senza vista*. Ogni
+   feature visiva ha un equivalente audio o aptico.
+2. **Niente input dipendenti dalla vista.** No UI che richieda di "guardare" un bottone,
+   no laser pointer come unico mezzo di selezione.
+3. **Feedback audio sempre presente.** Ogni evento di stato (grab, errore, completamento
+   task, cambio zona) ha voice-over o suono dedicato.
+4. **Calibrazione per partecipante.** Intensità forza e range termico parametrizzabili
+   via ScriptableObject o config runtime — niente valori hard-coded nei MonoBehaviour.
+5. **Tutto sul piano del tavolo.** Gli oggetti sono **tile flat** o bump bassi a
+   y≈0.86 (table top y=0.85). Niente oggetti alti, niente esplorazione verticale,
+   niente interazioni "in aria". La mano scorre in XZ, la differenziazione tattile
+   arriva dalla forma del top + texture/stiffness/temperatura.
 
 ## Architecture
 
-### Rendering & Input
-- **URP** (Universal Render Pipeline v17.3.0) with separate PC and Mobile renderer assets under `Assets/Settings/`
-- **New Input System** (v1.17.0) — action map defined in `Assets/InputSystem_Actions.inputactions`
-
-### Interface-driven design
-Core interactions are abstracted via interfaces in `Assets/Scripts/Interface/`:
-- `IGrabbable` — grab/release physics objects
-- `ITouchable` — touch to spawn copies of prefabs
-- `IPressable` — button press actions
-- `IScenari` — scenario navigation (Next/Back/Reset)
-- `IGridOrientable` — rotation snapping for grid placement
+### Interface-driven
+Le interazioni core sono astratte in `Assets/Scripts/Interface/`:
+- `IGrabbable` — grab/release oggetti fisici
+- `ITouchable` — touch → spawn copie di prefab
+- `IPressable` — azioni bottone
+- `IScenari` — navigazione scenari (Next/Back/Reset)
+- `IGridOrientable` — rotation snapping su griglia
 
 ### Hand system (`Assets/Scripts/Hands/`)
-Dual-hand simulation with per-finger joint articulation:
-- **HandInputManager** — orchestrates hand switching (Space), cursor lock, fullscreen
-- **HandPhysicsController** — Rigidbody movement (mouse + keyboard), confined to table bounds
-- **HandCollisionController** — tracks which hand parts touch which objects, manages audio feedback
-- **HandColliderPart** — per-finger-segment collision detection (`touchDistance` = 0.03m)
-- **HandCloseController** — finger selection (keys 0-5) and scroll-wheel closure
-- **HandGrabController** — left-click grab/press, right-click destroy, S/D rotate in hand
-- **FingerController / ThumbController** — joint interpolation between open/closed poses
+Simulazione bimanuale con articolazione per-dito:
+- `HandInputManager` — switch mano (Space), cursor lock, fullscreen
+- `HandPhysicsController` — movimento Rigidbody (mouse + tastiera), confinato al tavolo
+- `HandCollisionController` — tracking parti mano ↔ oggetti, audio feedback
+- `HandColliderPart` — collisione per segmento di dito (`touchDistance` = 0.03m)
+- `HandCloseController` — selezione dita (0-5) e chiusura via scroll
+- `HandGrabController` — left grab/press, right destroy, S/D ruota in mano
+- `FingerController` / `ThumbController` — interpolazione giunti tra pose open/closed
 
-### Braille system (`Assets/Scripts/Braille/`)
-3-level braille learning progression:
-- **BrailleDatabase** — static letter/digit→6-dot pattern encoding
-- **BrailleGrid** — spawns configurable rows×columns of BrailleCells (cell size 0.2×0.3m)
-- **BrailleCell / BrailleDot** — 6-dot representation with raised/hidden states
-- **BrailleGameManager** — level progression (L1: single char, L2: random word, L3: two words)
-- **BrailleWordProvider** — loads words from TextAsset
+Lo `WeArtHandController` ufficiale del SDK è **intenzionalmente disabilitato**: il
+movimento mano lo fanno i nostri script. L'output aptico passa comunque per
+`WeArtHapticObject` / `WeArtTouchableObject` su trigger collisions → `WeArtController` →
+TCP:13031 → middleware → device.
 
-### Scenario management (`Assets/Scripts/Scenarios/`)
-- **TableScenarioManager** — top-level controller for 3 scenarios (menu + 3 gameplay)
-- **Scenario1SubManager** — grid-based object placement sub-levels
-- **Scenario2Manager** — braille reading with grid resizing per level (1×2 → 1×5 → 2×5)
+### Haptics (`Assets/Scripts/Haptics/`)
+Bridge custom sopra il SDK Weart per coesistenza con l'hand controller nostro:
+- `WeArtHapticBridge` — instradamento eventi aptici tra mani simulate e device
+- `HapticActuationEnabler` — abilita/disabilita attuazione per setup mono/bi-manuale
+- `HapticFingerSetup` — mappatura dita Unity → attuatori TouchDIVER
+- `WeArtTrackingSetup` — config tracking quando si usa SDK nativo
+- `Assets/Scripts/Debug/HapticTriggerMonitor` — diagnostica trigger aptici
 
-### Grid & object systems
-- **BuildGrid** (`Assets/Scripts/Grid/`) — 13×8 cell snap grid (cell size 0.075m), prevents overlapping
-- **GrabbableObject** / **TouchableObject** (`Assets/Scripts/Objects/`) — physics grab with optional grid snapping, touch-to-spawn factory
-- **TriangleGridOrientation** — rotation snapping at 90° increments for prism shapes
+### Vive Tracker (`Assets/Scripts/ViveTracker/`)
+Tracking esterno opzionale (tracker montato sul TouchDIVER per posizione mano reale):
+- `ViveTrackerManager` — bind dei tracker SteamVR ai target Unity. Va riempito con i
+  serial dei due tracker (`Left Tracker Serial` / `Right Tracker Serial`, formato
+  `LHR-XXXXXXXX`) e i Transform target. Tracking Origin = `Tracking Universe Standing`
+- `ViveTrackerCalibrationManager` — allineamento spazio SteamVR ↔ coordinate Unity.
+  Premere **Space** in gioco con il palmo della mano di calibrazione (lato definito
+  da `CalibrationHandSide`) completamente appoggiato al tavolo, dita perpendicolari
+  al bordo
+- `TrackerDebugger` — abilitare temporaneamente come component per loggare seriali e
+  posizioni di tutti i tracker connessi, poi disabilitarlo (`Show Debug Objects` ON
+  mostra anche i gameobject di calibrazione `RightCalibrationTarget` /
+  `LeftCalibrationTarget` a runtime)
 
-### Audio (`Assets/Scripts/Audio/`)
-- **ObjectAudioFeedback** — spatial 3D audio feedback differentiated by object type (table/pressable/grabbable/touchable/default)
+**Procedura per assegnare i tracker a una nuova installazione:**
+1. Abilitare `TrackerDebugger` → console stampa `LHR-XXXXXXXX` di ciascun tracker e la
+   sua posizione
+2. Identificare dx/sx dal posizionamento fisico (vedi sotto)
+3. Copiare i seriali nei campi di `ViveTrackerManager`
+4. Disabilitare `TrackerDebugger`
 
-### Camera
-- **TopCameraFitTable** (`Assets/Scripts/Camera/`) — orthographic top-down view fitted to table dimensions
+**Orientamento fisico sui TouchDIVER:**
+- Tracker **sinistro**: LED verde **lontano** dalla persona, in direzione delle dita
+- Tracker **destro**: LED verde **verso** la persona, in direzione delle dita
+- I fori del tracker si allineano con i pin del supporto stampato (lato L/R inciso
+  sul supporto)
 
-### External SDK
-- **WEART SDK v2.1.5_preview** — haptic glove integration, referenced as local package with absolute path in `Packages/manifest.json`
-- **Device:** TouchDIVER Pro — 6 actuation points (Thumb, Index, Middle, Annular, Pinky, Palm)
-- **SDK docs:** https://weart.it/docs/sdkunity/2.1.0_preview/
-- **Haptic coexistence:** Hand movement uses custom scripts (HandPhysicsController, FingerController); WeArtHandController is intentionally disabled. Haptic output (temperature, force, texture) flows through WeArtHapticObject/WeArtTouchableObject trigger collisions → WeArtController → TCP:13031 → middleware → device
-- **Runtime requires:** WEART Middleware running + TouchDIVER Pro connected
+**Opzioni in `ViveTrackerCalibrationManager`:**
+- `FreezeFingersClosure` — le dita ignorano i valori di chiusura/abduzione
+- `AllowOnlyLateralRotation` — mano ruota solo sull'asse Y
+- `FreezeHeight` — mano non si muove su/giù
+- `FreezeAllRotation` — mano forzata nella direzione di calibrazione (richiede
+  `FreezeHeight` + `AllowOnlyLateralRotation` attivi)
 
-## Controls (defined in scripts)
+### Braille (`Assets/Scripts/Braille/`)
+Apprendimento braille a 3 livelli:
+- `BrailleDatabase` — encoding statico lettera/digit → pattern 6 punti
+- `BrailleGrid` — spawna righe×colonne di `BrailleCell` (cell size 0.2×0.3m)
+- `BrailleCell` / `BrailleDot` — rappresentazione 6 punti con stati raised/hidden
+- `BrailleGameManager` — L1: char singolo · L2: parola random · L3: due parole
+- `BrailleWordProvider` — carica parole da TextAsset
 
-| Input | Action |
+### Scenari (`Assets/Scripts/Scenarios/`)
+- `TableScenarioManager` — controller top-level (menu + 3 scenari gameplay)
+- `Scenario1SubManager` — placement oggetti su griglia
+- `Scenario2Manager` — lettura braille con resize griglia per livello (1×2 → 1×5 → 2×5)
+
+### Grid & Objects
+- `BuildGrid` (`Assets/Scripts/Grid/`) — snap grid 13×8, cell size 0.075m, niente overlap
+- `GrabbableObject` / `TouchableObject` (`Assets/Scripts/Objects/`) — physics grab con
+  snapping opzionale, factory touch-to-spawn
+- `TriangleGridOrientation` — rotation snapping a 90° per prismi
+
+### Audio & Camera
+- `ObjectAudioFeedback` (`Assets/Scripts/Audio/`) — audio spaziale 3D differenziato per
+  tipo (table / pressable / grabbable / touchable / default)
+- `TopCameraFitTable` (`Assets/Scripts/Camera/`) — ortho top-down fittata al tavolo
+  (legacy desktop; in VR non viene usata)
+
+## Hardware Weart
+
+- TouchDIVER Pro: 6 punti di attuazione (Thumb, Index, Middle, Annular, Pinky, Palm) —
+  forza, vibrazione, temperatura
+- Il feedback termico richiede **~2-3s** per raggiungere target → non triggerare cambi
+  termici rapidi consecutivi, non avranno effetto e confondono il partecipante
+- Configurazioni: 1 o 2 TouchDIVER (dx, sx, o entrambe)
+- Verificare stato middleware prima dell'inizio sessione
+- SDK docs: https://weart.it/docs/sdkunity/2.2.0/
+
+**`WeArtController` prefab in scena:**
+- `Device Generation` = `TD_Pro`
+- `Start Calibration Automatically` ON — calibrazione TouchDIVER all'avvio della scena
+- `Allow Gestures`, `Use External Grasp System`, `Start Raw Data Automatically` OFF
+
+## Aggiungere oggetti touchable
+
+Regole per un nuovo oggetto da rendere tattile (vedi `Cube`, `Cylinder`, `Prism`, `Star`
+nella scena come riferimento):
+
+**Mesh Collider** (se non è una primitiva tipo Cube/Sphere)
+- `Convex` ON — necessario per il physics system
+- `Is Trigger` ON — l'oggetto si lascia attraversare (la sensazione la generano i pad
+  aptici, non c'è blocco fisico)
+
+**Rigidbody** (obbligatorio: il sistema haptic reagisce solo a oggetti con Rigidbody)
+- `Use Gravity` OFF, `Is Kinematic` ON → oggetto floating, controllato a mano
+- `Mass = 1`, `Angular Drag = 0.05` (default)
+
+**`WeArtTouchableObject`**
+- Spuntare `Stiffness` / `Texture` / `Temperature` secondo la sensazione desiderata
+- `Disable Dynamic Force` ON — senza questo la forza viene applicata in modo sbagliato
+  sulle dita
+- `Graspable` ON solo se l'oggetto deve essere afferrabile
+
+**Oggetti complessi (non convex)**
+Split in più mesh convex separate (es. una stella = 1 cubo + 4 prismi). Ogni parte ha
+il suo Rigidbody + WeArtTouchableObject. Il parent è un GameObject vuoto che fa solo
+da container — niente collider/rigidbody sul parent.
+
+## Controlli desktop (fallback)
+
+| Input | Azione |
 |---|---|
-| Mouse move | Hand position |
-| Q / E | Hand up / down |
-| Arrow keys, Z / X | Hand rotation |
-| Space | Switch left/right hand |
-| 0-5 + scroll | Select finger(s) + close/open |
+| Mouse | Posizione mano |
+| Q / E | Mano su / giù |
+| Frecce, Z / X | Rotazione mano |
+| Space | Switch sx / dx |
+| 0-5 + scroll | Seleziona dita + chiudi / apri |
 | Left click | Grab / Press |
-| Right click | Destroy held object |
-| S / D | Rotate grabbed object |
+| Right click | Distruggi oggetto in mano |
+| S / D | Ruota oggetto in mano |
 
-## Conventions
+In VR la mappatura passa al controller / tracking nativo — la sorgente attiva è gestita
+da `HandInputManager`.
 
-- Comments are in **Italian**
-- Scripts are organized by feature domain under `Assets/Scripts/`
-- Prefabs in `Assets/Prefabs/`: Braille, Button, CellGrid, Cube, Cylinder, Prism
-- Configuration is done via Unity Inspector (`[SerializeField]` fields) rather than code constants
-- Physics interactions use `FixedUpdate` and Rigidbody-based movement
-- **MAI cambiare i path SDK/pacchetti in `manifest.json`** senza coordinamento esplicito — il path è specifico per macchina e la cartella SDK (`Packages/WEART-UNITY-SDK*/`) è in `.gitignore`
-- **MAI modificare riferimenti guid/fileID nei file `.unity` / `.prefab` / `.asset`** — sono generati da Unity e legati all'installazione locale
+## Convenzioni codice
+
+- Commenti **in italiano** (convenzione storica, manteniamola anche sui nuovi script)
+- `SerializeField` privato invece di public field
+- Niente `GetComponent` / `Find` in `Update` — cachare in `Awake`
+- Configurazione via Inspector (`[SerializeField]`), non costanti hard-coded
+- Physics nei `FixedUpdate` con Rigidbody
+- API Unity 6: `FindObjectsByType<T>(FindObjectsSortMode.None)`, non `FindObjectOfType`
+- Logging dati sperimentali via un `SessionLogger` centralizzato (da introdurre in
+  `Assets/Scripts/Experiment/` quando arriviamo al raccolto dati), non `Debug.Log` sparsi
+- Namespace `HapticResearch.<Sottosistema>` sui nuovi script — i vecchi vanno
+  retro-fittati a poco a poco, non in un colpo solo
+
+## Logging dati sperimentali
+
+- Formato: CSV in `<persistentDataPath>/SessionLogs/`
+- Campi minimi: timestamp ISO 8601, `participantId` (anonimo), level, condition,
+  eventType, eventData (JSON)
+- **MAI** dati personali identificativi — solo ID anonimi assegnati prima della sessione
+
+## Workflow scene
+
+`SampleScene.unity` e `ViveTrackerScene.unity` sono **template**, non si toccano. Per
+sviluppare un nuovo livello:
+
+1. Duplicare `ViveTrackerScene.unity` (è la base con tutto già configurato: WEART,
+   Vive Tracker, mani, tavolo)
+2. Rinominare in `LevelN_<NomeBreve>.unity` (es. `Level1_ShapeRecognition.unity`)
+3. Lavorare nella copia, non nell'originale
+
+Stessa cosa per i prefab: se serve modificarne uno esistente per un livello, duplicarlo
+prima.
+
+## Cosa NON fare
+
+- **MAI** cambiare il path del pacchetto WEART in `Packages/manifest.json` senza
+  coordinarsi: è specifico per macchina e la cartella SDK è in `.gitignore`
+- **MAI** modificare guid/fileID nei `.unity` / `.prefab` / `.asset` — generati da Unity
+  e legati all'installazione locale; il collegamento Inspector lo fa la persona che apre
+  la scena
+- **MAI** toccare file dentro `Packages/WEART-UNITY-SDK/` o `Assets/SteamVR/` — è codice
+  di terze parti, si aggiorna sostituendo il pacchetto
+- Non toccare `Library/`, `Temp/`, `Logs/`, `UserSettings/` (sono in `.gitignore`)
+- Non aggiungere dipendenze pesanti senza chiedere prima
+- Non usare API Unity deprecate (vedi convenzioni sopra)
+
+## Branch policy
+
+- `main` = stabile, solo merge da feature branch dopo test su hardware reale
+- `feature/*` = sviluppo attivo, un branch per feature
+  (es. `feature/haptic-feedback`, `feature/port-vive-tracker`)
+- PR + review prima del merge in `main`
+
+## Team
+
+UniBS — Prof.ssa Anna Richelli (supervisione), Lorenzo Ghiro (ricercatore),
+Luca Castelnovo (tesista), Simone Saleri (stagista).

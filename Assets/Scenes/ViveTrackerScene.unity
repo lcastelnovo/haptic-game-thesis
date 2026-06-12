@@ -868,6 +868,98 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6773b19a66062e441bee169fcd94bb91, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &240164261
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 240164263}
+  - component: {fileID: 240164262}
+  - component: {fileID: 240164264}
+  m_Layer: 0
+  m_Name: Level1Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &240164262
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240164261}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e56f6f1d8ad84f1fa74e022b43dcb47, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Levels.ShapeRecognitionManager
+  shapes:
+  - id: cubo
+    sceneInstance: {fileID: 4620611176648045198, guid: b9edc39165cce534283ecdd1668d5072, type: 3}
+    prefab: {fileID: 0}
+    announceClip: {fileID: 8300000, guid: 68e43ab5d817b40b682044c51d9868ce, type: 3}
+  - id: cilindro
+    sceneInstance: {fileID: 3416449074710447151, guid: 98a6b007c818e0747968df368ef336b0, type: 3}
+    prefab: {fileID: 0}
+    announceClip: {fileID: 8300000, guid: 6562749c6d5ec49aa8b7bbd6e3d3f905, type: 3}
+  - id: triangolo
+    sceneInstance: {fileID: 7868023644064380215, guid: fdded407d57ffde49996bc2011896e52, type: 3}
+    prefab: {fileID: 0}
+    announceClip: {fileID: 8300000, guid: f0e7e4d4134194cf7a689b63a23aa59a, type: 3}
+  tableCenter: {fileID: 0}
+  tableY: 0.86
+  spacing: 0.18
+  perRow: 4
+  spawnHeightOffset: 0.03
+  holdDuration: 5
+  selectionCooldown: 0.5
+  startKey: 13
+  repeatKey: 114
+  autoStart: 0
+  levelStartClip: {fileID: 0}
+  correctClip: {fileID: 8300000, guid: 14716b18588cd410a8bf1b03198e6813, type: 3}
+  wrongClip: {fileID: 8300000, guid: c70e88f5bff264460b8e6ff8745e34e2, type: 3}
+  levelCompleteClip: {fileID: 0}
+  holdLoopClip: {fileID: 8300000, guid: dd3383c37e1514245b9bb780c5245d30, type: 3}
+  rampHoldPitch: 1
+  voiceVolume: 1
+  sessionLogger: {fileID: 0}
+  levelId: level1_shape_recognition
+--- !u!4 &240164263
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240164261}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.00633, y: -0, z: -1.17078}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &240164264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 240164261}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3abd1ce30ba941b281a73e2c5ef8857, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Levels.OperatorControls
+  manager: {fileID: 0}
+  showPanel: 1
+  scale: 1.5
 --- !u!1 &280017193
 GameObject:
   m_ObjectHideFlags: 0
@@ -14508,7 +14600,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 0.4
+  orthographic size: 0.40224913
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -22831,3 +22923,4 @@ SceneRoots:
   - {fileID: 1052380477}
   - {fileID: 966042787}
   - {fileID: 280017196}
+  - {fileID: 240164263}
