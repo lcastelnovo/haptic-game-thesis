@@ -100,3 +100,6 @@ InitTestScene*.unity*
 # Claude Code
 .claude/
 session-changes.md
+
+# macOS
+.DS_Store
