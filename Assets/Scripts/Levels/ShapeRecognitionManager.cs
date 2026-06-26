@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using HapticResearch.Experiment;
+using HapticResearch.Haptics;
 
 namespace HapticResearch.Levels
 {
@@ -84,6 +85,7 @@ namespace HapticResearch.Levels
 
         private HandGrabController[] handGrabControllers;
         private GloveGrabController[] gloveGrabControllers;
+        private WeArtGraspBridge graspBridge; // presa delle mani WEART (VR / guanto reale)
 
         private AudioSource voiceSource; // annunci + SFX (one-shot)
         private AudioSource holdSource;  // loop durante l'hold
@@ -113,6 +115,15 @@ namespace HapticResearch.Levels
             // Sorgenti di grab (mouse + guanto) su tutte le mani, anche se inattive (hand switching).
             handGrabControllers = FindObjectsByType<HandGrabController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             gloveGrabControllers = FindObjectsByType<GloveGrabController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+            // Bridge per la presa delle mani WEART (VR / guanto reale). Usa quello in scena
+            // se presente, altrimenti lo crea: cosi' il livello funziona senza setup manuale.
+            graspBridge = WeArtGraspBridge.Instance;
+            if (graspBridge == null)
+            {
+                var found = FindObjectsByType<WeArtGraspBridge>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                graspBridge = found.Length > 0 ? found[0] : gameObject.AddComponent<WeArtGraspBridge>();
+            }
 
             if (sessionLogger == null) sessionLogger = SessionLogger.Instance;
 
@@ -352,15 +363,34 @@ namespace HapticResearch.Levels
             candidate = null;
             ignoredStillHeld = false;
 
+            // Presa desktop (mouse) e guanto simulato, via i nostri controller.
             for (int i = 0; i < handGrabControllers.Length; i++)
                 InspectHeld(handGrabControllers[i].CurrentGrabbable, ref candidate, ref ignoredStillHeld);
             for (int i = 0; i < gloveGrabControllers.Length; i++)
                 InspectHeld(gloveGrabControllers[i].CurrentGrabbable, ref candidate, ref ignoredStillHeld);
+
+            // Presa delle mani WEART (VR / guanto reale): legge l'oggetto afferrato dal bridge.
+            if (graspBridge != null)
+            {
+                InspectHeldObject(graspBridge.LeftGrasped, ref candidate, ref ignoredStillHeld);
+                InspectHeldObject(graspBridge.RightGrasped, ref candidate, ref ignoredStillHeld);
+            }
         }
 
         private void InspectHeld(IGrabbable grabbable, ref RecognizableShape candidate, ref bool ignoredStillHeld)
         {
             if (grabbable == null || !grabbableToShape.TryGetValue(grabbable, out var rec)) return;
+            if (rec == ignoredShape) ignoredStillHeld = true;
+            else if (candidate == null) candidate = rec;
+        }
+
+        // Variante per la presa WEART: dall'oggetto fisico afferrato (il GameObject del
+        // WeArtTouchableObject, anche una sotto-mesh) risale alla forma con GetComponentInParent.
+        private void InspectHeldObject(GameObject grasped, ref RecognizableShape candidate, ref bool ignoredStillHeld)
+        {
+            if (grasped == null) return;
+            var rec = grasped.GetComponentInParent<RecognizableShape>();
+            if (rec == null || !shapeToDef.ContainsKey(rec)) return;
             if (rec == ignoredShape) ignoredStillHeld = true;
             else if (candidate == null) candidate = rec;
         }
