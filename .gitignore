@@ -101,5 +101,10 @@ InitTestScene*.unity*
 .claude/
 session-changes.md
 
+# BMad
+_bmad/
+_bmad-output/
+
 # macOS
 .DS_Store
+Archive.zip
