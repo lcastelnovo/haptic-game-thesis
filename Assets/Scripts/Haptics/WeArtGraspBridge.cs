@@ -66,5 +66,29 @@ namespace HapticResearch.Haptics
             if (hand == HandSide.Left && leftGrasped == grabbed) leftGrasped = null;
             else if (hand == HandSide.Right && rightGrasped == grabbed) rightGrasped = null;
         }
+
+        // --- Aggancio DEMO (mouse) --------------------------------------------------------
+        // Permette alla modalità demo di segnare/togliere un oggetto come "afferrato" da una mano,
+        // ESATTAMENTE come farebbe il guanto reale, così i manager di livello reagiscono allo stesso
+        // modo (path input-agnostico). NON tocca il flusso device: HandleGrasp/HandleRelease restano
+        // per gli eventi WEART reali. Uso un bool (mano sinistra?) per non accoppiare la demo a HandSide.
+        public void SetDemoGrasp(GameObject grabbed, bool leftHand)
+        {
+            if (leftHand) leftGrasped = grabbed;
+            else rightGrasped = grabbed;
+        }
+
+        public void ClearDemoGrasp(bool leftHand)
+        {
+            if (leftHand) leftGrasped = null;
+            else rightGrasped = null;
+        }
+
+        // Rilascia entrambe le mani (usato al riavvio del livello per una partita pulita).
+        public void Clear()
+        {
+            leftGrasped = null;
+            rightGrasped = null;
+        }
     }
 }
