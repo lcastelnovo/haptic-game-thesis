@@ -10,6 +10,19 @@ public class HandGrabController : MonoBehaviour
     private IGrabbable currentGrabbable;
     public IGrabbable CurrentGrabbable => currentGrabbable;
 
+    // Afferra una forma specifica (usato dalla modalità demo: click sulla forma puntata dal cursore).
+    public bool ForceGrab(IGrabbable grabbable)
+    {
+        if (currentGrabbable != null || grabbable == null || !grabbable.CanBeInteractedWith)
+            return false;
+        currentGrabbable = grabbable;
+        grabbable.OnGrab(grabPoint);
+        return true;
+    }
+
+    // Rilascio pubblico (usato dalla demo per il grab da tastiera).
+    public void ReleaseGrab() => Release();
+
     void Update()
     {
         if (Input.GetMouseButtonDown(0) && currentGrabbable == null)

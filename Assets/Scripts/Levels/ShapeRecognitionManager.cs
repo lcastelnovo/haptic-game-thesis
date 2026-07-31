@@ -193,6 +193,7 @@ namespace HapticResearch.Levels
                 var rec = go.GetComponent<RecognizableShape>();
                 if (rec == null) rec = go.AddComponent<RecognizableShape>();
                 rec.SetShapeId(def.Id);
+                rec.ResetVisual(); // al (ri)avvio riporta la forma al colore originale
 
                 var grab = go.GetComponent<GrabbableObject>();
                 if (grab != null)
@@ -261,6 +262,11 @@ namespace HapticResearch.Levels
                 Debug.LogWarning("[ShapeRecognition] Nessuna forma configurata: impossibile avviare.");
                 return;
             }
+
+            // Nuova partita: riporta le forme al colore base (blu) e rilascia eventuali prese.
+            foreach (var rec in FindObjectsByType<RecognizableShape>(FindObjectsSortMode.None))
+                rec.ResetVisual();
+            if (graspBridge != null) graspBridge.Clear();
 
             BuildRoundOrder();
             roundIndex = -1;
@@ -409,6 +415,7 @@ namespace HapticResearch.Levels
 
             if (correct)
             {
+                shape.MarkSolved(); // feedback visivo: la forma indovinata diventa verde
                 PlayOneShot(correctClip);
                 Log("answer_correct",
                     $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"errors\":{currentRoundErrors},\"timeSec\":{elapsed:0.00}}}");
