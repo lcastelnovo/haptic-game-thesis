@@ -326,11 +326,15 @@ namespace HapticResearch.Hands
         }
 
         // Sola lettura sullo stato del middleware WEART: NON modifica nulla del percorso guanti.
-        // Usiamo IsCalibrated: il prefab WeArtController è SEMPRE in scena, ma senza un device reale
-        // la calibrazione non va a buon fine, quindi "device presente" = presente E calibrato.
+        // "Device presente" = middleware davvero CONNESSO (socket aperto). NB: il prefab WeArtController
+        // è sempre in scena e il getter .Client CREA il client, quindi "Client != null" è sempre vero:
+        // il segnale affidabile è Client.IsConnected. (IsCalibrated era troppo stringente: se la
+        // calibrazione non andava a buon fine la demo non si spegneva mai.) Stesso segnale di
+        // GloveGraspDetector, così demo e grab guanti concordano sempre.
         private bool IsWeArtDevicePresent()
         {
-            return WeArtController.Instance != null && WeArtController.Instance.IsCalibrated;
+            var c = WeArtController.Instance;
+            return c != null && c.Client != null && c.Client.IsConnected;
         }
 
         // ---------------------------------------------------------------------------------------
