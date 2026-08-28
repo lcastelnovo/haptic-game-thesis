@@ -67,22 +67,28 @@ namespace HapticResearch.Haptics
             else if (hand == HandSide.Right && rightGrasped == grabbed) rightGrasped = null;
         }
 
-        // --- Aggancio DEMO (mouse) --------------------------------------------------------
-        // Permette alla modalità demo di segnare/togliere un oggetto come "afferrato" da una mano,
-        // ESATTAMENTE come farebbe il guanto reale, così i manager di livello reagiscono allo stesso
-        // modo (path input-agnostico). NON tocca il flusso device: HandleGrasp/HandleRelease restano
-        // per gli eventi WEART reali. Uso un bool (mano sinistra?) per non accoppiare la demo a HandSide.
-        public void SetDemoGrasp(GameObject grabbed, bool leftHand)
+        // --- Aggancio ESTERNO (demo mouse + guanti veri) ----------------------------------
+        // Permette a una sorgente esterna di segnare/togliere un oggetto come "afferrato" da una
+        // mano, ESATTAMENTE come farebbe il grasp nativo WEART, così i manager di livello reagiscono
+        // allo stesso modo (path input-agnostico). Lo usano SIA la demo (HandDemoModeController, tasto
+        // G) SIA i guanti veri (GloveGraspDetector, chiusura reale delle dita). NON tocca il flusso
+        // device: HandleGrasp/HandleRelease restano per gli eventi WEART nativi. Uso un bool (mano
+        // sinistra?) per non accoppiare i chiamanti a HandSide.
+        public void SetGrasp(GameObject grabbed, bool leftHand)
         {
             if (leftHand) leftGrasped = grabbed;
             else rightGrasped = grabbed;
         }
 
-        public void ClearDemoGrasp(bool leftHand)
+        public void ClearGrasp(bool leftHand)
         {
             if (leftHand) leftGrasped = null;
             else rightGrasped = null;
         }
+
+        // Alias storici usati da HandDemoModeController (mantenuti per compatibilità).
+        public void SetDemoGrasp(GameObject grabbed, bool leftHand) => SetGrasp(grabbed, leftHand);
+        public void ClearDemoGrasp(bool leftHand) => ClearGrasp(leftHand);
 
         // Rilascia entrambe le mani (usato al riavvio del livello per una partita pulita).
         public void Clear()

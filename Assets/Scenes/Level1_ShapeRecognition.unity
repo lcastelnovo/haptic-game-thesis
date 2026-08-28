@@ -970,6 +970,8 @@ MonoBehaviour:
   manager: {fileID: 0}
   showPanel: 1
   scale: 1.5
+  slideSpeed: 7
+  panelSizeEstimate: {x: 260, y: 210}
 --- !u!1 &302735975
 GameObject:
   m_ObjectHideFlags: 0
@@ -3674,6 +3676,9 @@ PrefabInstance:
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1717170040}
     - targetCorrespondingSourceObject: {fileID: 5115586883562200671, guid: d96bc87e105609845a567ed410265443, type: 3}
       insertIndex: -1
       addedObject: {fileID: 567690275}
@@ -9090,6 +9095,9 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
       insertIndex: -1
+      addedObject: {fileID: 1717170041}
+    - targetCorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
+      insertIndex: -1
       addedObject: {fileID: 912214358}
     - targetCorrespondingSourceObject: {fileID: 1801213762828999993, guid: 61972392a851bc247b240501e69e2916, type: 3}
       insertIndex: -1
@@ -13977,7 +13985,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 0.4
+  orthographic size: 0.4552239
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -17277,9 +17285,63 @@ MonoBehaviour:
   logoOnTable: 1
   tableLogoPos: {x: 0, y: 0.861, z: -0.28}
   tableLogoSize: 0.45
+  tableLogoEuler: {x: 90, y: 180, z: 0}
   backdrop: 1
   backdropPos: {x: 0, y: 1.25, z: 1.3}
   backdropSize: 1.3
+--- !u!1 &1717170030
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1717170031}
+  - component: {fileID: 1717170032}
+  m_Layer: 0
+  m_Name: VoiceControlManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1717170031
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1717170030}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1717170032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1717170030}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54a02b06af474204b2fde6eefb10c053, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  manager: {fileID: 0}
+  startEnabled: 1
+  muteKey: 109
+  minimumConfidence: 1
+  extraStartPhrases: []
+  extraRepeatPhrases: []
+  commandAckClip: {fileID: 0}
+  showStatus: 1
+  levelId: level1_shape_recognition
 --- !u!114 &1741780990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22056,6 +22118,44 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   part: 4
   touchDistance: 0.01
+--- !u!114 &1717170040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 567690237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  isLeftHand: 1
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
+  closureThreshold: 0.5
+  minFingersClosed: 2
+  grabPoint: {fileID: 0}
+  contactRadius: 0.08
+--- !u!114 &1717170041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 912214321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  isLeftHand: 0
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
+  closureThreshold: 0.5
+  minFingersClosed: 2
+  grabPoint: {fileID: 0}
+  contactRadius: 0.08
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -22076,3 +22176,4 @@ SceneRoots:
   - {fileID: 1717170002}
   - {fileID: 2127279649}
   - {fileID: 1717170021}
+  - {fileID: 1717170031}

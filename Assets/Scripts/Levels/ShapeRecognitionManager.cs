@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HapticResearch.Experiment;
 using HapticResearch.Haptics;
+using HapticResearch.Audio;
 
 namespace HapticResearch.Levels
 {
@@ -123,6 +124,16 @@ namespace HapticResearch.Levels
             {
                 var found = FindObjectsByType<WeArtGraspBridge>(FindObjectsInactive.Include, FindObjectsSortMode.None);
                 graspBridge = found.Length > 0 ? found[0] : gameObject.AddComponent<WeArtGraspBridge>();
+            }
+
+            // Narrazione vocale (istruzioni/annunci/feedback pre-generati con ElevenLabs).
+            // Come per il bridge: usa quella in scena se presente, altrimenti la crea, cosi' il
+            // livello parla senza setup manuale. Se le tracce non ci sono ancora, i metodi Voice()
+            // ricadono sui clip assegnati da Inspector (comportamento storico, nessuna regressione).
+            if (NarrationManager.Instance == null)
+            {
+                var foundNarr = FindObjectsByType<NarrationManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                if (foundNarr.Length == 0) gameObject.AddComponent<NarrationManager>();
             }
 
             if (sessionLogger == null) sessionLogger = SessionLogger.Instance;
@@ -271,7 +282,9 @@ namespace HapticResearch.Levels
             BuildRoundOrder();
             roundIndex = -1;
             ignoredShape = null;
-            PlayOneShot(levelStartClip);
+            // Istruzioni parlate iniziali; il primo annuncio (in NextRound) viene ACCODATO cosi'
+            // parte solo quando le istruzioni sono finite, senza sovrapporsi.
+            Voice("instructions_intro", levelStartClip, false);
             Log("level_start", $"{{\"shapes\":{shapes.Count}}}");
             NextRound();
         }
@@ -306,20 +319,23 @@ namespace HapticResearch.Levels
             state = State.AwaitingSelection;
             StopHoldAudio();
 
-            AnnounceTarget();
+            AnnounceTarget(true); // accodato: segue istruzioni iniziali o feedback "giusto"
             Log("round_start", $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\"}}");
         }
 
-        private void AnnounceTarget()
+        // Annuncia la forma bersaglio. queue=true accoda (dopo istruzioni/feedback), false
+        // interrompe e annuncia subito. Usa la voce ElevenLabs "find_<id>" se generata,
+        // altrimenti ricade sull'AnnounceClip da Inspector.
+        private void AnnounceTarget(bool queue)
         {
-            if (currentTarget != null && currentTarget.AnnounceClip != null)
-                PlayOneShot(currentTarget.AnnounceClip);
+            if (currentTarget == null) return;
+            Voice($"find_{currentTarget.Id}", currentTarget.AnnounceClip, queue);
         }
 
-        // L'operatore può ri-annunciare il bersaglio (repeatKey o bottone UI).
+        // L'operatore può ri-annunciare il bersaglio (repeatKey, bottone UI o comando vocale).
         public void RepeatAnnouncement()
         {
-            if (state == State.AwaitingSelection) AnnounceTarget();
+            if (state == State.AwaitingSelection) AnnounceTarget(false); // subito, interrompe
         }
 
         private void UpdateHold()
@@ -416,7 +432,7 @@ namespace HapticResearch.Levels
             if (correct)
             {
                 shape.MarkSolved(); // feedback visivo: la forma indovinata diventa verde
-                PlayOneShot(correctClip);
+                Voice("answer_correct", correctClip, true); // "esatto" -> poi il prossimo annuncio accodato
                 Log("answer_correct",
                     $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"errors\":{currentRoundErrors},\"timeSec\":{elapsed:0.00}}}");
                 NextRound();
@@ -424,7 +440,7 @@ namespace HapticResearch.Levels
             else
             {
                 currentRoundErrors++;
-                PlayOneShot(wrongClip);
+                Voice("answer_wrong", wrongClip, false); // subito; stesso bersaglio, niente ri-annuncio
                 Log("answer_wrong",
                     $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"chosen\":\"{def?.Id}\",\"errors\":{currentRoundErrors}}}");
                 // stesso bersaglio: si resta in AwaitingSelection
@@ -436,7 +452,7 @@ namespace HapticResearch.Levels
             state = State.LevelComplete;
             currentTarget = null;
             StopHoldAudio();
-            PlayOneShot(levelCompleteClip);
+            Voice("level_complete", levelCompleteClip, true); // dopo l'ultimo "esatto" accodato
             Log("level_complete", $"{{\"rounds\":{roundOrder.Count}}}");
         }
 
@@ -446,6 +462,21 @@ namespace HapticResearch.Levels
         {
             if (clip == null || voiceSource == null) return;
             voiceSource.PlayOneShot(clip);
+        }
+
+        // Riproduce una battuta: se il NarrationManager ha la traccia pre-generata con quella
+        // chiave usa la voce ElevenLabs, altrimenti ricade sul clip da Inspector (fallback
+        // storico). queue=true accoda senza interrompere; false interrompe e parla subito.
+        private void Voice(string key, AudioClip fallback, bool queue)
+        {
+            var nm = NarrationManager.Instance;
+            if (nm != null && nm.Has(key))
+            {
+                if (queue) nm.SpeakQueued(key);
+                else nm.Speak(key);
+                return;
+            }
+            PlayOneShot(fallback); // nessuna traccia vocale: comportamento audio originale
         }
 
         private void StartHoldAudio()

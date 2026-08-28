@@ -108,3 +108,8 @@ _bmad-output/
 # macOS
 .DS_Store
 Archive.zip
+
+# ElevenLabs API key (MAI committare: la voce si genera in locale, la key resta fuori da git)
+Tools/.elevenlabs.key
+Tools/*.key
+*.elevenlabs.key
