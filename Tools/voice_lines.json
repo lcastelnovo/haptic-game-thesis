@@ -5,6 +5,10 @@
   "find_sfera": "Trova la sfera.",
   "find_prisma": "Trova il prisma.",
   "menu_welcome": "Benvenuto nel gioco delle forme tattili dell'Università di Brescia. Quando sei pronto, premi Invio, oppure dì: avvia, per iniziare il livello riconoscimento forme. Premi R per riascoltare questo messaggio.",
+  "menu_main": "Menu principale. Dì: uno, per il livello riconoscimento delle forme. Dì: due, per il livello labirinto. Puoi anche premere i tasti uno o due sulla tastiera. Dì: ripeti, per riascoltare le opzioni.",
+  "menu_start_level1": "Avvio il livello riconoscimento delle forme.",
+  "menu_start_level2": "Avvio il livello labirinto.",
+  "menu_not_available": "Questo livello non è ancora disponibile.",
   "answer_correct": "Esatto, molto bene.",
   "answer_wrong": "Non è quella giusta. Rilascia la forma e riprova.",
   "level_complete": "Complimenti, hai riconosciuto tutte le forme. Livello completato."
