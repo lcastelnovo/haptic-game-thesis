@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using HapticResearch.Audio;
 using HapticResearch.UI;
@@ -89,29 +88,24 @@ namespace HapticResearch.Levels
         public void GoToNextLevel()
         {
             if (loading || manager == null || !manager.IsComplete) return;
+            var nm = NarrationManager.Instance;
 
             if (string.IsNullOrEmpty(nextSceneName) || !Application.CanStreamedLevelBeLoaded(nextSceneName))
             {
                 Debug.LogWarning($"[LevelFlow] Scena '{nextSceneName}' non caricabile (manca dalla Scene List?).");
-                var nm = NarrationManager.Instance;
                 if (nm != null && nm.Has("menu_not_available")) nm.Speak("menu_not_available");
                 return;
             }
 
             loading = true;
-            StartCoroutine(ConfirmAndLoad());
-        }
 
-        private IEnumerator ConfirmAndLoad()
-        {
-            var nm = NarrationManager.Instance;
-            if (nm != null && nm.Has(confirmKey))
-            {
-                nm.Speak(confirmKey);
-                float deadline = Time.time + 5f; // lascia finire la conferma, con timeout
-                while (nm.IsSpeaking && Time.time < deadline) yield return null;
-            }
-            SceneFader.LoadSceneWithFade(nextSceneName);
+            // Conferma parlata e caricamento in parallelo, come nel menu principale:
+            // il labirinto si carica sotto la schermata "Caricamento..." e si entra
+            // quando la voce ha finito (timeout di sicurezza).
+            if (nm != null && nm.Has(confirmKey)) nm.Speak(confirmKey);
+            float deadline = Time.time + 5f;
+            SceneFader.LoadSceneWithFade(nextSceneName,
+                () => nm == null || !nm.IsSpeaking || Time.time >= deadline);
         }
 
         // --- Riconoscimento vocale (SOLO Windows) -------------------------------------

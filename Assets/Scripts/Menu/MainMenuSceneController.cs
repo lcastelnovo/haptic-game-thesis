@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -129,33 +128,27 @@ namespace HapticResearch.Menu
         public void SelectLevel(MenuLevelEntry level)
         {
             if (loading || level == null) return;
+            var nm = NarrationManager.Instance;
 
             // Scena presente nella build? Se no, avvisa e resta nel menu (es. Level 2 non
             // ancora portato su questa macchina).
             if (string.IsNullOrEmpty(level.SceneName) || !Application.CanStreamedLevelBeLoaded(level.SceneName))
             {
                 Debug.LogWarning($"[MainMenu] Scena '{level.SceneName}' non caricabile (manca dalla Scene List?).");
-                var nm = NarrationManager.Instance;
                 if (nm != null && nm.Has("menu_not_available")) nm.Speak("menu_not_available");
                 return;
             }
 
             loading = true;
-            StartCoroutine(ConfirmAndLoad(level));
-        }
 
-        private IEnumerator ConfirmAndLoad(MenuLevelEntry level)
-        {
-            var nm = NarrationManager.Instance;
+            // Conferma parlata e caricamento in PARALLELO: il livello si carica in
+            // background (schermata "Caricamento...") e si entra solo quando la voce ha
+            // finito (timeout di sicurezza se la voce non c'e' o si incastra).
             string confirmKey = $"menu_start_{level.Id}";
-            if (nm != null && nm.Has(confirmKey))
-            {
-                nm.Speak(confirmKey);
-                // Lascia finire la conferma prima del cambio scena (timeout di sicurezza).
-                float deadline = Time.time + 5f;
-                while (nm.IsSpeaking && Time.time < deadline) yield return null;
-            }
-            SceneFader.LoadSceneWithFade(level.SceneName); // dissolvenza, poi carica
+            if (nm != null && nm.Has(confirmKey)) nm.Speak(confirmKey);
+            float deadline = Time.time + 5f;
+            SceneFader.LoadSceneWithFade(level.SceneName,
+                () => nm == null || !nm.IsSpeaking || Time.time >= deadline);
         }
 
         // --- Riconoscimento vocale (SOLO Windows) -------------------------------------
