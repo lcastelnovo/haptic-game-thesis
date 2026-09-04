@@ -108,11 +108,20 @@ namespace HapticResearch.Menu
                 }
         }
 
-        private void AnnounceOptions()
+        // Pubblico: richiamato anche dal bottone "Ripeti annuncio" della UI operatore.
+        public void AnnounceOptions()
         {
             var nm = NarrationManager.Instance;
             if (nm != null && nm.Has(menuKey)) nm.Speak(menuKey);
             else Debug.LogWarning($"[MainMenu] Traccia '{menuKey}' mancante: genera le voci con Tools/generate_voice_macos.py.");
+        }
+
+        // Selezione per indice della lista livelli: comodo per i bottoni UI (onClick con
+        // parametro int), stessa identica logica della voce e dei tasti.
+        public void SelectLevelByIndex(int index)
+        {
+            if (index < 0 || index >= levels.Count) return;
+            SelectLevel(levels[index]);
         }
 
         // Conferma parlata, poi carica la scena. Pubblico: usabile anche da UI operatore.
