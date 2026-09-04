@@ -129,8 +129,8 @@ namespace HapticResearch.EditorTools
                 new Color(1f, 1f, 1f, 0.85f), -420f, new Vector2(1400f, 50f));
 
             // Bottoni livello: stessa azione di voce e tasti (SelectLevelByIndex).
-            AddLevelButton(canvasGo.transform, controller, 0, "1  ·  Riconoscimento delle forme", -540f);
-            AddLevelButton(canvasGo.transform, controller, 1, "2  ·  Labirinto", -650f);
+            AddLevelButton(canvasGo.transform, controller, 0, "1. Riconoscimento delle forme", -540f);
+            AddLevelButton(canvasGo.transform, controller, 1, "2. Labirinto", -650f);
 
             // Bottone secondario: ripete l'annuncio vocale delle opzioni.
             var repeatBtn = AddButton(canvasGo.transform, "RepeatButton", "Ripeti annuncio vocale  (R)", 26,
@@ -152,8 +152,8 @@ namespace HapticResearch.EditorTools
             var creditsText = credits.gameObject.AddComponent<Text>();
             SetupText(creditsText,
                 "Progetto di tesi - Laboratorio UniBS\n" +
-                "Supervisione: Prof.ssa Anna Richelli   ·   Ricerca: Lorenzo Ghiro\n" +
-                "Sviluppo: Luca Castelnovo (tesista)   ·   Simone Saleri (stagista)",
+                "Supervisione: Prof.ssa Anna Richelli - Ricerca: Lorenzo Ghiro\n" +
+                "Sviluppo: Luca Castelnovo (tesista) - Simone Saleri (stagista)",
                 22, FontStyle.Normal, new Color(1f, 1f, 1f, 0.6f));
         }
 
