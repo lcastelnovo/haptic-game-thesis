@@ -13985,7 +13985,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 0.4552239
+  orthographic size: 0.4
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -17342,6 +17342,46 @@ MonoBehaviour:
   commandAckClip: {fileID: 0}
   showStatus: 1
   levelId: level1_shape_recognition
+--- !u!114 &1717170040
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 567690237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isLeftHand: 1
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
+  closureThreshold: 0.5
+  minFingersClosed: 2
+  grabPoint: {fileID: 0}
+  contactRadius: 0.08
+  debugLog: 1
+--- !u!114 &1717170041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 912214321}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isLeftHand: 0
+  fingerTracking: []
+  thumbTracking: {fileID: 0}
+  closureThreshold: 0.5
+  minFingersClosed: 2
+  grabPoint: {fileID: 0}
+  contactRadius: 0.08
+  debugLog: 1
 --- !u!114 &1741780990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22118,44 +22158,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   part: 4
   touchDistance: 0.01
---- !u!114 &1717170040
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 567690237}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  isLeftHand: 1
-  fingerTracking: []
-  thumbTracking: {fileID: 0}
-  closureThreshold: 0.5
-  minFingersClosed: 2
-  grabPoint: {fileID: 0}
-  contactRadius: 0.08
---- !u!114 &1717170041
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 912214321}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b77667e6b3004f48bdf018a738550b41, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
-  isLeftHand: 0
-  fingerTracking: []
-  thumbTracking: {fileID: 0}
-  closureThreshold: 0.5
-  minFingersClosed: 2
-  grabPoint: {fileID: 0}
-  contactRadius: 0.08
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
