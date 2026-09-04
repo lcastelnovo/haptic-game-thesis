@@ -3003,6 +3003,60 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   part: 4
   touchDistance: 0.01
+--- !u!1 &542978104
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 542978106}
+  - component: {fileID: 542978105}
+  m_Layer: 0
+  m_Name: LevelFlow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &542978105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 542978104}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d3a24a8ced134c87bf42f01fe225777, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Levels.LevelFlowController
+  manager: {fileID: 0}
+  nextSceneName: Labyrinth
+  nextLevelKey: 110
+  nextPhrases:
+  - avanti
+  - prossimo livello
+  - vai avanti
+  - livello successivo
+  hintKey: level1_next_hint
+  confirmKey: menu_start_level2
+--- !u!4 &542978106
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 542978104}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!43 &560301867
 Mesh:
   m_ObjectHideFlags: 0
@@ -21742,7 +21796,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6014917037508604915, guid: b8dadcd16adf4f84a81c4b08f90a349a, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -995
+      value: -1725
       objectReference: {fileID: 0}
     - target: {fileID: 6043785083562455006, guid: b8dadcd16adf4f84a81c4b08f90a349a, type: 3}
       propertyPath: m_SizeDelta.y
@@ -22601,3 +22655,4 @@ SceneRoots:
   - {fileID: 1493837243}
   - {fileID: 879139468}
   - {fileID: 771766787}
+  - {fileID: 542978106}
