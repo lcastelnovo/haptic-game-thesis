@@ -2,6 +2,9 @@
   "instructions_intro": "Benvenuto. In questo gioco esplorerai delle forme appoggiate sul tavolo usando il tatto. Quando senti l'annuncio, cerca con la mano la forma richiesta. Quando pensi di averla trovata, afferrala e tienila stretta per cinque secondi per confermare la scelta. Se sbagli, rilascia la forma e potrai riprovare. Sei pronto? Si comincia.",
   "find_cubo": "Trova il cubo.",
   "find_cilindro": "Trova il cilindro.",
+  "find_sfera": "Trova la sfera.",
+  "find_prisma": "Trova il prisma.",
+  "menu_welcome": "Benvenuto nel gioco delle forme tattili dell'Università di Brescia. Quando sei pronto, premi Invio, oppure dì: avvia, per iniziare il livello riconoscimento forme. Premi R per riascoltare questo messaggio.",
   "answer_correct": "Esatto, molto bene.",
   "answer_wrong": "Non è quella giusta. Rilascia la forma e riprova.",
   "level_complete": "Complimenti, hai riconosciuto tutte le forme. Livello completato."
