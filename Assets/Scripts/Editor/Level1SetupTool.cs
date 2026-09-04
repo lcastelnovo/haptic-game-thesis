@@ -77,6 +77,7 @@ namespace HapticResearch.EditorTools
 
             bool menuCreated = EnsureMainMenu();
             bool flowCreated = EnsureLevelFlow();
+            EnsureGraspDebugPanel();
 
             EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
             Debug.Log($"[Level1Setup] Fatto: {added} forme registrate, menu {(menuCreated ? "creato" : "gia' presente")}, " +
@@ -285,6 +286,20 @@ namespace HapticResearch.EditorTools
             go.AddComponent<LevelFlowController>(); // manager e scena successiva: default/auto-find
 
             Undo.RegisterCreatedObjectUndo(go, "Crea LevelFlow Level1");
+            return true;
+        }
+
+        // --- Pannello diagnostico presa (F1) ---------------------------------------------
+
+        private static bool EnsureGraspDebugPanel()
+        {
+            if (Object.FindFirstObjectByType<HapticResearch.Debugging.GraspDebugPanel>(FindObjectsInactive.Include) != null)
+                return false;
+
+            var go = new GameObject("GraspDebugPanel");
+            go.AddComponent<HapticResearch.Debugging.GraspDebugPanel>();
+
+            Undo.RegisterCreatedObjectUndo(go, "Crea GraspDebugPanel Level1");
             return true;
         }
     }

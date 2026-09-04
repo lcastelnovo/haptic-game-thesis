@@ -6412,6 +6412,52 @@ MonoBehaviour:
   touchableSound: {fileID: 8300000, guid: 21707d1bdf5cf9243aa32f7d7cef3aae, type: 3}
   tableSound: {fileID: 8300000, guid: a2297308a14323548bcf5b3213a247ca, type: 3}
   defaultSound: {fileID: 8300000, guid: da759c6ba8fff9f40a519410a4f5aba1, type: 3}
+--- !u!1 &743524277
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 743524279}
+  - component: {fileID: 743524278}
+  m_Layer: 0
+  m_Name: GraspDebugPanel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &743524278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743524277}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd5abbc90bae845a0a7ae6759f6addb2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Debugging.GraspDebugPanel
+  toggleKey: 282
+  startVisible: 0
+--- !u!4 &743524279
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 743524277}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &749365090
 GameObject:
   m_ObjectHideFlags: 0
@@ -17834,6 +17880,7 @@ MonoBehaviour:
   minFingersClosed: 2
   grabPoint: {fileID: 0}
   contactRadius: 0.08
+  openThreshold: 0.3
   debugLog: 1
 --- !u!114 &1717170041
 MonoBehaviour:
@@ -17854,6 +17901,7 @@ MonoBehaviour:
   minFingersClosed: 2
   grabPoint: {fileID: 0}
   contactRadius: 0.08
+  openThreshold: 0.3
   debugLog: 1
 --- !u!114 &1741780990
 MonoBehaviour:
@@ -22656,3 +22704,4 @@ SceneRoots:
   - {fileID: 879139468}
   - {fileID: 771766787}
   - {fileID: 542978106}
+  - {fileID: 743524279}
