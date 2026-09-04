@@ -9,6 +9,7 @@
   "menu_start_level1": "Avvio il livello riconoscimento delle forme.",
   "menu_start_level2": "Avvio il livello labirinto.",
   "menu_not_available": "Questo livello non è ancora disponibile.",
+  "level1_next_hint": "Per passare al livello successivo, il labirinto, dì: avanti, oppure premi N. Per far giocare un nuovo partecipante premi Invio.",
   "answer_correct": "Esatto, molto bene.",
   "answer_wrong": "Non è quella giusta. Rilascia la forma e riprova.",
   "level_complete": "Complimenti, hai riconosciuto tutte le forme. Livello completato."

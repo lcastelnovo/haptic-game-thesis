@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using HapticResearch.Audio;
+using HapticResearch.UI;
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
 using UnityEngine.Windows.Speech;
 #endif
@@ -154,7 +155,7 @@ namespace HapticResearch.Menu
                 float deadline = Time.time + 5f;
                 while (nm.IsSpeaking && Time.time < deadline) yield return null;
             }
-            SceneManager.LoadScene(level.SceneName);
+            SceneFader.LoadSceneWithFade(level.SceneName); // dissolvenza, poi carica
         }
 
         // --- Riconoscimento vocale (SOLO Windows) -------------------------------------

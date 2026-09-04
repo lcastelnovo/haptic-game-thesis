@@ -71,9 +71,11 @@ namespace HapticResearch.EditorTools
             if (prism != null && RegisterShape(manager, "prisma", prism)) added++;
 
             bool menuCreated = EnsureMainMenu();
+            bool flowCreated = EnsureLevelFlow();
 
             EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
-            Debug.Log($"[Level1Setup] Fatto: {added} forme registrate, menu {(menuCreated ? "creato" : "gia' presente")}. " +
+            Debug.Log($"[Level1Setup] Fatto: {added} forme registrate, menu {(menuCreated ? "creato" : "gia' presente")}, " +
+                      $"level flow {(flowCreated ? "creato" : "gia' presente")}. " +
                       "Controlla posizioni/rotazioni in Scene view e SALVA la scena.");
         }
 
@@ -254,6 +256,20 @@ namespace HapticResearch.EditorTools
             mso.ApplyModifiedProperties();
 
             Undo.RegisterCreatedObjectUndo(go, "Crea MainMenu Level1");
+            return true;
+        }
+
+        // --- Passaggio al livello 2 ------------------------------------------------------
+
+        private static bool EnsureLevelFlow()
+        {
+            if (Object.FindFirstObjectByType<LevelFlowController>(FindObjectsInactive.Include) != null)
+                return false;
+
+            var go = new GameObject("LevelFlow");
+            go.AddComponent<LevelFlowController>(); // manager e scena successiva: default/auto-find
+
+            Undo.RegisterCreatedObjectUndo(go, "Crea LevelFlow Level1");
             return true;
         }
     }
