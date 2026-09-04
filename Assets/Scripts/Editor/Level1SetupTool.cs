@@ -70,6 +70,11 @@ namespace HapticResearch.EditorTools
             var prism = EnsurePrism(template);
             if (prism != null && RegisterShape(manager, "prisma", prism)) added++;
 
+            // Materiale sempre allineato al template, anche per forme gia' esistenti: se il
+            // team cambia il materiale di cubo/cilindro basta rilanciare questo tool.
+            SyncMaterial(sphere, template);
+            SyncMaterial(prism, template);
+
             bool menuCreated = EnsureMainMenu();
             bool flowCreated = EnsureLevelFlow();
 
@@ -193,14 +198,24 @@ namespace HapticResearch.EditorTools
             return mesh;
         }
 
+        private static void SyncMaterial(GameObject go, GameObject template)
+        {
+            if (go == null || template == null) return;
+            var templateRenderer = template.GetComponent<Renderer>();
+            var renderer = go.GetComponent<Renderer>();
+            if (templateRenderer == null || renderer == null) return;
+            if (renderer.sharedMaterial != templateRenderer.sharedMaterial)
+            {
+                renderer.sharedMaterial = templateRenderer.sharedMaterial;
+                Debug.Log($"[Level1Setup] Materiale di '{go.name}' allineato a '{template.name}'.");
+            }
+        }
+
         // Materiale + Rigidbody + WeArtTouchableObject copiati dal template: config identica
         // alle forme che gia' funzionano, senza dipendere dai nomi dei campi del SDK.
         private static void FinishShape(GameObject go, GameObject template)
         {
-            var templateRenderer = template.GetComponent<Renderer>();
-            var renderer = go.GetComponent<Renderer>();
-            if (templateRenderer != null && renderer != null)
-                renderer.sharedMaterial = templateRenderer.sharedMaterial;
+            SyncMaterial(go, template);
 
             ComponentUtility.CopyComponent(template.GetComponent<Rigidbody>());
             ComponentUtility.PasteComponentAsNew(go);
