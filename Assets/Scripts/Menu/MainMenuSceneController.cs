@@ -49,11 +49,21 @@ namespace HapticResearch.Menu
         [Header("Livelli (in ordine di annuncio)")]
         [SerializeField] private List<MenuLevelEntry> levels = new List<MenuLevelEntry>();
 
+        [Header("Musica di apertura")]
+        [Tooltip("Jingle riprodotto all'avvio del menu, PRIMA che la voce parli. Se vuoto, prova a caricare Resources/Audio/menu_music.")]
+        [SerializeField] private AudioClip menuMusic;
+
+        [Tooltip("Volume della musica di apertura.")]
+        [SerializeField, Range(0f, 1f)] private float musicVolume = 0.8f;
+
+        [Tooltip("Attesa massima (s) della musica: se il brano e' piu' lungo, la voce parte comunque e la musica si abbassa.")]
+        [SerializeField] private float maxMusicWaitSeconds = 8f;
+
         [Header("Annuncio opzioni")]
         [Tooltip("Chiave della traccia con l'elenco delle opzioni (Resources/Voice).")]
         [SerializeField] private string menuKey = "menu_main";
 
-        [Tooltip("Secondi di attesa prima dell'annuncio all'avvio della scena.")]
+        [Tooltip("Secondi di attesa minima prima dell'annuncio all'avvio della scena.")]
         [SerializeField] private float welcomeDelay = 1f;
 
         [Tooltip("Tasto per riascoltare le opzioni.")]
@@ -70,9 +80,29 @@ namespace HapticResearch.Menu
         private bool welcomeSpoken;
         private float timer;
         private bool loading; // scelta gia' fatta: ignora altri input mentre si carica
+        private AudioSource musicSource;
+
+        void Awake()
+        {
+            // Sorgente 2D dedicata alla musica di apertura.
+            musicSource = gameObject.AddComponent<AudioSource>();
+            musicSource.spatialBlend = 0f;
+            musicSource.playOnAwake = false;
+            musicSource.loop = false;
+        }
 
         void Start()
         {
+            // Jingle di apertura: da Inspector, o per nome da Resources/Audio/menu_music
+            // (cosi' aggiungere/cambiare la musica non richiede di ricablare la scena).
+            var clip = menuMusic != null ? menuMusic : Resources.Load<AudioClip>("Audio/menu_music");
+            if (clip != null)
+            {
+                musicSource.clip = clip;
+                musicSource.volume = musicVolume;
+                musicSource.Play();
+            }
+
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
             BuildVocabularyAndStart();
 #else
@@ -87,9 +117,14 @@ namespace HapticResearch.Menu
             if (!welcomeSpoken)
             {
                 timer += Time.deltaTime;
-                if (timer >= welcomeDelay)
+
+                // La voce aspetta la fine della musica di apertura (con tetto massimo: se
+                // il brano e' lungo si parla comunque, abbassando la musica sotto la voce).
+                bool musicDone = musicSource == null || musicSource.clip == null || !musicSource.isPlaying;
+                if (timer >= welcomeDelay && (musicDone || timer >= maxMusicWaitSeconds))
                 {
                     welcomeSpoken = true;
+                    if (!musicDone) musicSource.volume = musicVolume * 0.25f; // musica sotto la voce
                     AnnounceOptions();
                 }
                 return;
