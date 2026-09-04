@@ -150,6 +150,10 @@ namespace HapticResearch.Hands
 
         private string Side => isLeftHand ? "SX" : "DX";
 
+        // Espone lato e posizione del punto di presa per la diagnostica (GraspDebugPanel).
+        public bool IsLeftHand => isLeftHand;
+        public Vector3? GrabPointPosition => grabPoint != null ? grabPoint.position : (Vector3?)null;
+
         // Rilascia nel bridge la presa impostata da questa mano.
         private void ReleaseIfHolding()
         {

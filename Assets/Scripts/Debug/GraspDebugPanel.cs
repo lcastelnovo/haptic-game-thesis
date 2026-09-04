@@ -72,6 +72,15 @@ namespace HapticResearch.Debugging
             if (manager != null)
                 sb.AppendLine($"Livello: {(manager.IsRunning ? $"round {manager.CurrentRound}/{manager.TotalRounds}, trova '{manager.CurrentTargetId}'" : manager.IsComplete ? "COMPLETATO" : "fermo")}");
 
+            // Posizione del punto di presa di ogni mano: se la "destra" risulta ferma
+            // vicino a una forma mentre muovi il braccio destro, i tracker sono invertiti.
+            foreach (var d in detectors)
+            {
+                if (d == null) continue;
+                var gp = d.GrabPointPosition;
+                sb.AppendLine($"GrabPoint {(d.IsLeftHand ? "SX" : "DX")}: {(gp.HasValue ? gp.Value.ToString("0.00") : "n/d")}");
+            }
+
             sb.AppendLine($"GloveGraspDetector in scena: {detectors.Length} (log dettagliati in Console)");
 
             var content = new GUIContent(sb.ToString());
