@@ -78,6 +78,7 @@ namespace HapticResearch.EditorTools
             bool menuCreated = EnsureMainMenu();
             bool flowCreated = EnsureLevelFlow();
             EnsureGraspDebugPanel();
+            DisableTrackerDebugger();
 
             EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
             Debug.Log($"[Level1Setup] Fatto: {added} forme registrate, menu {(menuCreated ? "creato" : "gia' presente")}, " +
@@ -287,6 +288,19 @@ namespace HapticResearch.EditorTools
 
             Undo.RegisterCreatedObjectUndo(go, "Crea LevelFlow Level1");
             return true;
+        }
+
+        // Il TrackerDebugger stampa seriale+posizione di ogni tracker A OGNI FRAME: utile
+        // solo per assegnare i seriali su una macchina nuova (vedi CLAUDE.md), poi va
+        // spento o la Console diventa illeggibile. Qui lo si disabilita senza rimuoverlo.
+        private static void DisableTrackerDebugger()
+        {
+            foreach (var td in Object.FindObjectsByType<TrackerDebugger>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (!td.enabled) continue;
+                td.enabled = false;
+                Debug.Log("[Level1Setup] TrackerDebugger disabilitato (Console pulita). Riabilitarlo solo per configurare tracker nuovi.");
+            }
         }
 
         // --- Pannello diagnostico presa (F1) ---------------------------------------------
