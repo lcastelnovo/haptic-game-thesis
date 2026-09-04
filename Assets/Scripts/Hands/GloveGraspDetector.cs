@@ -46,6 +46,13 @@ namespace HapticResearch.Hands
         [Tooltip("Raggio (m) entro cui una forma conta come 'in mano'. Come la demo: 0.08.")]
         [SerializeField] private float contactRadius = 0.08f;
 
+        [Header("Anti presa-fantasma (guanto appoggiato e dimenticato)")]
+        [Tooltip("Metri di spostamento del palmo che contano come 'la mano si sta muovendo'.")]
+        [SerializeField] private float minMovementToGrasp = 0.03f;
+
+        [Tooltip("La presa e' permessa solo se il palmo si e' mosso negli ultimi N secondi. Un guanto acceso ma appoggiato sul tavolo (chiusure rumorose vicino alla soglia) resta fermo e non puo' piu' afferrare forme a sua insaputa.")]
+        [SerializeField] private float movementWindow = 4f;
+
         [Tooltip("Log diagnostici in Console (device connesso, dita chiuse, afferra/rilascia).")]
         [SerializeField] private bool debugLog = true;
 
@@ -54,6 +61,12 @@ namespace HapticResearch.Hands
         private bool wasClosedEnough = true; // fronte di chiusura: parte "chiuso" per non afferrare al via
         private bool wasConnected;
         private int debugTick;
+
+        // Anti presa-fantasma: la mano deve essersi mossa di recente per poter afferrare.
+        // Parte "mai mossa": un guanto acceso ma mai spostato non afferra niente.
+        private Vector3 moveAnchor;
+        private bool moveAnchorReady;
+        private float lastMovementTime = float.NegativeInfinity;
 
         void Awake()
         {
@@ -103,6 +116,7 @@ namespace HapticResearch.Hands
 
             int closed = CountClosedFingers();
             bool closedEnough = closed >= minFingersClosed;
+            UpdateMovementTracking();
 
             if (held == null)
             {
@@ -110,15 +124,24 @@ namespace HapticResearch.Hands
                 // non prende "da fermo" se le dita risultano gia' chiuse all'avvio o in calibrazione.
                 if (closedEnough && !wasClosedEnough)
                 {
-                    var shape = FindShapeNearHand();
-                    if (shape != null)
+                    if (!HandRecentlyMoved)
                     {
-                        held = shape;
-                        bridge.SetGrasp(shape.gameObject, isLeftHand);
-                        if (debugLog) Debug.Log($"[GloveGrasp {Side}] AFFERRA '{shape.name}' (dita chiuse: {closed})");
+                        // Chiusura rilevata ma palmo immobile: quasi certamente un guanto
+                        // appoggiato (chiusure rumorose vicino alla soglia), non una mano vera.
+                        if (debugLog) Debug.Log($"[GloveGrasp {Side}] presa IGNORATA: palmo fermo da oltre {movementWindow}s (guanto appoggiato?)");
                     }
-                    else if (debugLog)
-                        Debug.Log($"[GloveGrasp {Side}] {closed} dita chiuse ma nessuna forma entro {contactRadius} m dal grabPoint");
+                    else
+                    {
+                        var shape = FindShapeNearHand();
+                        if (shape != null)
+                        {
+                            held = shape;
+                            bridge.SetGrasp(shape.gameObject, isLeftHand);
+                            if (debugLog) Debug.Log($"[GloveGrasp {Side}] AFFERRA '{shape.name}' (dita chiuse: {closed})");
+                        }
+                        else if (debugLog)
+                            Debug.Log($"[GloveGrasp {Side}] {closed} dita chiuse ma nessuna forma entro {contactRadius} m dal grabPoint");
+                    }
                 }
                 else if (debugLog && (++debugTick % 120 == 0))
                     Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed}");
@@ -171,6 +194,27 @@ namespace HapticResearch.Hands
             if (thumbTracking != null && thumbTracking.Closure.Value >= closureThreshold) n++;
             return n;
         }
+
+        // Aggiorna il tracciamento del movimento del palmo: ogni volta che si sposta di
+        // almeno minMovementToGrasp dall'ultima ancora, l'ancora si sposta e si segna il
+        // tempo. "Mossa di recente" = un movimento entro movementWindow secondi.
+        private void UpdateMovementTracking()
+        {
+            if (grabPoint == null) return;
+            if (!moveAnchorReady)
+            {
+                moveAnchor = grabPoint.position;
+                moveAnchorReady = true;
+                return;
+            }
+            if (Vector3.Distance(grabPoint.position, moveAnchor) >= minMovementToGrasp)
+            {
+                moveAnchor = grabPoint.position;
+                lastMovementTime = Time.time;
+            }
+        }
+
+        private bool HandRecentlyMoved => Time.time - lastMovementTime <= movementWindow;
 
         private RecognizableShape FindShapeNearHand()
         {
