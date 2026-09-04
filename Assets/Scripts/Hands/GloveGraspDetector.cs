@@ -47,26 +47,17 @@ namespace HapticResearch.Hands
         [SerializeField] private float contactRadius = 0.08f;
 
         [Header("Anti presa-fantasma (guanto appoggiato e dimenticato)")]
-        [Tooltip("Metri di spostamento del palmo che contano come 'la mano si sta muovendo'.")]
-        [SerializeField] private float minMovementToGrasp = 0.03f;
-
-        [Tooltip("La presa e' permessa solo se il palmo si e' mosso negli ultimi N secondi. Un guanto acceso ma appoggiato sul tavolo (chiusure rumorose vicino alla soglia) resta fermo e non puo' piu' afferrare forme a sua insaputa.")]
-        [SerializeField] private float movementWindow = 4f;
+        [Tooltip("Per armare la presa la mano deve prima APRIRSI: dita sotto questa chiusura. Il rumore di un guanto appoggiato oscilla di poco attorno alla soglia di chiusura e non scende mai fin qui, quindi non arma mai la presa. Regolabile per partecipante se qualcuno non riesce ad aprire bene la mano.")]
+        [SerializeField, Range(0f, 1f)] private float openThreshold = 0.3f;
 
         [Tooltip("Log diagnostici in Console (device connesso, dita chiuse, afferra/rilascia).")]
         [SerializeField] private bool debugLog = true;
 
         private WeArtGraspBridge bridge;
         private RecognizableShape held; // forma attualmente segnata nel bridge da QUESTA mano
-        private bool wasClosedEnough = true; // fronte di chiusura: parte "chiuso" per non afferrare al via
+        private bool armed;             // la mano si e' aperta davvero: presa pronta (parte NON armata)
         private bool wasConnected;
         private int debugTick;
-
-        // Anti presa-fantasma: la mano deve essersi mossa di recente per poter afferrare.
-        // Parte "mai mossa": un guanto acceso ma mai spostato non afferra niente.
-        private Vector3 moveAnchor;
-        private bool moveAnchorReady;
-        private float lastMovementTime = float.NegativeInfinity;
 
         void Awake()
         {
@@ -110,41 +101,39 @@ namespace HapticResearch.Hands
             if (!connected)
             {
                 ForgetLocalOnly();
-                wasClosedEnough = true; // al ritorno del device serve un nuovo apri->chiudi
+                armed = false; // al ritorno del device serve un vero apri -> chiudi
                 return;
             }
 
             int closed = CountClosedFingers();
             bool closedEnough = closed >= minFingersClosed;
-            UpdateMovementTracking();
+            // Mano "davvero aperta" = meno di minFingersClosed dita sopra la soglia BASSA.
+            // E' il cancello anti-fantasma: serve scendere fin qui per armare la presa.
+            bool openEnough = CountFingersAbove(openThreshold) < minFingersClosed;
 
             if (held == null)
             {
-                // Afferra solo sul FRONTE di chiusura (apri -> chiudi) con una forma a contatto: così
-                // non prende "da fermo" se le dita risultano gia' chiuse all'avvio o in calibrazione.
-                if (closedEnough && !wasClosedEnough)
+                // ISTERESI apri -> chiudi: la presa scatta solo se la mano si e' prima
+                // aperta davvero (armed) e poi chiusa. Le oscillazioni di un guanto
+                // appoggiato attorno alla soglia di chiusura non scendono mai sotto
+                // openThreshold, quindi non armano mai: niente prese fantasma.
+                if (openEnough) armed = true;
+
+                if (armed && closedEnough)
                 {
-                    if (!HandRecentlyMoved)
+                    armed = false; // presa consumata: per riprovare bisogna riaprire la mano
+                    var shape = FindShapeNearHand();
+                    if (shape != null)
                     {
-                        // Chiusura rilevata ma palmo immobile: quasi certamente un guanto
-                        // appoggiato (chiusure rumorose vicino alla soglia), non una mano vera.
-                        if (debugLog) Debug.Log($"[GloveGrasp {Side}] presa IGNORATA: palmo fermo da oltre {movementWindow}s (guanto appoggiato?)");
+                        held = shape;
+                        bridge.SetGrasp(shape.gameObject, isLeftHand);
+                        if (debugLog) Debug.Log($"[GloveGrasp {Side}] AFFERRA '{shape.name}' (dita chiuse: {closed})");
                     }
-                    else
-                    {
-                        var shape = FindShapeNearHand();
-                        if (shape != null)
-                        {
-                            held = shape;
-                            bridge.SetGrasp(shape.gameObject, isLeftHand);
-                            if (debugLog) Debug.Log($"[GloveGrasp {Side}] AFFERRA '{shape.name}' (dita chiuse: {closed})");
-                        }
-                        else if (debugLog)
-                            Debug.Log($"[GloveGrasp {Side}] {closed} dita chiuse ma nessuna forma entro {contactRadius} m dal grabPoint");
-                    }
+                    else if (debugLog)
+                        Debug.Log($"[GloveGrasp {Side}] {closed} dita chiuse ma nessuna forma entro {contactRadius} m dal grabPoint");
                 }
                 else if (debugLog && (++debugTick % 120 == 0))
-                    Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed}");
+                    Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed} - {(armed ? "presa pronta" : "apri la mano per armare la presa")}");
             }
             else
             {
@@ -157,8 +146,6 @@ namespace HapticResearch.Hands
                     ReleaseIfHolding();
                 }
             }
-
-            wasClosedEnough = closedEnough;
         }
 
         private string Side => isLeftHand ? "SX" : "DX";
@@ -185,36 +172,17 @@ namespace HapticResearch.Hands
             return c != null && c.Client != null && c.Client.IsConnected;
         }
 
-        private int CountClosedFingers()
+        private int CountClosedFingers() => CountFingersAbove(closureThreshold);
+
+        private int CountFingersAbove(float threshold)
         {
             int n = 0;
             if (fingerTracking != null)
                 for (int i = 0; i < fingerTracking.Length; i++)
-                    if (fingerTracking[i] != null && fingerTracking[i].Closure.Value >= closureThreshold) n++;
-            if (thumbTracking != null && thumbTracking.Closure.Value >= closureThreshold) n++;
+                    if (fingerTracking[i] != null && fingerTracking[i].Closure.Value >= threshold) n++;
+            if (thumbTracking != null && thumbTracking.Closure.Value >= threshold) n++;
             return n;
         }
-
-        // Aggiorna il tracciamento del movimento del palmo: ogni volta che si sposta di
-        // almeno minMovementToGrasp dall'ultima ancora, l'ancora si sposta e si segna il
-        // tempo. "Mossa di recente" = un movimento entro movementWindow secondi.
-        private void UpdateMovementTracking()
-        {
-            if (grabPoint == null) return;
-            if (!moveAnchorReady)
-            {
-                moveAnchor = grabPoint.position;
-                moveAnchorReady = true;
-                return;
-            }
-            if (Vector3.Distance(grabPoint.position, moveAnchor) >= minMovementToGrasp)
-            {
-                moveAnchor = grabPoint.position;
-                lastMovementTime = Time.time;
-            }
-        }
-
-        private bool HandRecentlyMoved => Time.time - lastMovementTime <= movementWindow;
 
         private RecognizableShape FindShapeNearHand()
         {
