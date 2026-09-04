@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 1931841827999850755}
   - component: {fileID: 4794498196066754502}
   - component: {fileID: 630701433504746371}
+  - component: {fileID: 7352862438013793172}
   m_Layer: 0
   m_Name: Cube
   m_TagString: Untagged
@@ -314,3 +315,16 @@ MonoBehaviour:
   OnRelease:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &7352862438013793172
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4620611176648045198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98efa26d9d5ef44189a1cd2a90dfde56, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Levels.RecognizableShape
+  shapeId: cubo

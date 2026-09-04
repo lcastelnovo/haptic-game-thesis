@@ -91,9 +91,10 @@ public class HandPhysicsController : MonoBehaviour
 
     public void MoveWithMouseB()
     {
-        // Ray dal mouse verso il piano del tavolo
+        // Ray dal mouse verso un piano orizzontale all'ALTEZZA ATTUALE della mano:
+        // così la mano finisce esattamente sotto il cursore (niente sfasamento di parallasse).
         Ray ray = topCamera.ScreenPointToRay(Input.mousePosition);
-        Plane tablePlane = new Plane(Vector3.up, tableTransform.position);
+        Plane tablePlane = new Plane(Vector3.up, new Vector3(0f, rb.position.y, 0f));
 
         float distance;
         if (tablePlane.Raycast(ray, out distance))
