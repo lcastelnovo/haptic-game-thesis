@@ -176,12 +176,23 @@ namespace HapticResearch.Hands
         {
             if (grabPoint == null) return null;
             var hits = Physics.OverlapSphere(grabPoint.position, contactRadius);
+
+            // Sceglie la forma PIÙ VICINA al palmo, non la prima restituita dal physics
+            // engine (ordine arbitrario): con più forme nel raggio prenderebbe a caso.
+            RecognizableShape best = null;
+            float bestDist = float.MaxValue;
             for (int i = 0; i < hits.Length; i++)
             {
                 var rec = hits[i].GetComponentInParent<RecognizableShape>();
-                if (rec != null) return rec;
+                if (rec == null) continue;
+                float d = Vector3.Distance(grabPoint.position, hits[i].ClosestPoint(grabPoint.position));
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = rec;
+                }
             }
-            return null;
+            return best;
         }
     }
 }
