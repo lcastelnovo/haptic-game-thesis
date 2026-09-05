@@ -1,5 +1,6 @@
 using UnityEngine;
 using HapticResearch.Audio;
+using HapticResearch.UI;
 
 namespace HapticResearch.Levels
 {
@@ -20,7 +21,7 @@ namespace HapticResearch.Levels
         [SerializeField] private ShapeRecognitionManager manager;
 
         [Header("Benvenuto")]
-        [Tooltip("Chiave della traccia vocale in Resources/Voice (vedi Tools/voice_lines.json).")]
+        [Tooltip("Chiave della traccia vocale in Resources/Voice (testi in Resources/Voice/voice_lines.json).")]
         [SerializeField] private string welcomeKey = "menu_welcome";
 
         [Tooltip("Secondi di attesa prima del benvenuto (lascia partire calibrazione/avvio scena).")]
@@ -80,7 +81,11 @@ namespace HapticResearch.Levels
                 nm.Speak(welcomeKey);
                 return;
             }
-            if (welcomeFallbackClip != null) fallbackSource.PlayOneShot(welcomeFallbackClip);
+            if (welcomeFallbackClip != null)
+            {
+                VoiceSubtitles.ReportSaid(VoiceLines.TextOf(welcomeKey) ?? $"[{welcomeKey}]", welcomeFallbackClip.length);
+                fallbackSource.PlayOneShot(welcomeFallbackClip);
+            }
             else Debug.LogWarning($"[MainMenu] Nessuna traccia '{welcomeKey}' e nessun clip di riserva: menu muto. Genera le voci con Tools/generate_voice_macos.py.");
         }
     }

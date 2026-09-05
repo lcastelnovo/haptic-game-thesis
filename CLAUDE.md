@@ -160,6 +160,17 @@ Apprendimento braille a 3 livelli:
 ### Audio & Camera
 - `ObjectAudioFeedback` (`Assets/Scripts/Audio/`) — audio spaziale 3D differenziato per
   tipo (table / pressable / grabbable / touchable / default)
+- `NarrationManager` (`Assets/Scripts/Audio/`) — battute vocali pre-generate caricate per
+  chiave da `Resources/Voice/<chiave>.mp3`; `CurrentKey` = battuta in riproduzione
+- `VoiceLines` (`Assets/Scripts/Audio/`) — testi delle battute da
+  `Assets/Resources/Voice/voice_lines.json`. È l'**unica fonte** dei testi: la leggono
+  sia gli script `Tools/generate_voice*.py` (per generare gli mp3) sia i sottotitoli
+- `VoiceSubtitles` (`Assets/Scripts/UI/`) — sottotitoli per l'operatore: riga SENTO
+  (frase riconosciuta dal microfono, confidenza, esito) e riga DICO (testo della battuta
+  in corso). Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
+  (`Placement`): in basso al centro nei livelli, in alto a sinistra nel menu (lo imposta
+  `MainMenuSceneController`, in basso ci sono i crediti). I controller vocali segnalano
+  ogni frase con `VoiceSubtitles.ReportHeard(...)` DOPO che l'azione ha deciso
 - `TopCameraFitTable` (`Assets/Scripts/Camera/`) — ortho top-down fittata al tavolo
   (legacy desktop; in VR non viene usata)
 
@@ -215,6 +226,8 @@ da container — niente collider/rigidbody sul parent.
 | Left click | Grab / Press |
 | Right click | Distruggi oggetto in mano |
 | S / D | Ruota oggetto in mano |
+| F1 | Pannello diagnostico presa (guanti, bridge, grabPoint) |
+| F2 | Mostra / nasconde sottotitoli voce (SENTO / DICO) |
 
 In VR la mappatura passa al controller / tracking nativo — la sorgente attiva è gestita
 da `HandInputManager`.

@@ -76,10 +76,15 @@ namespace HapticResearch.Menu
         [Tooltip("Tasto per mutare/riattivare il microfono (operatore).")]
         [SerializeField] private KeyCode muteKey = KeyCode.M;
 
+        [Header("Sottotitoli operatore")]
+        [Tooltip("Dove mettere i sottotitoli SENTO/DICO in questa scena: in basso ci sono i crediti, quindi di default in alto a sinistra.")]
+        [SerializeField] private VoiceSubtitles.Placement subtitlesPlacement = VoiceSubtitles.Placement.TopLeft;
+
         // --- runtime ---
         private bool welcomeSpoken;
         private float timer;
         private bool loading; // scelta gia' fatta: ignora altri input mentre si carica
+        private bool subtitlesPlaced;
         private AudioSource musicSource;
 
         void Awake()
@@ -112,6 +117,14 @@ namespace HapticResearch.Menu
 
         void Update()
         {
+            // I sottotitoli si auto-installano a scena caricata: appena ci sono, li si
+            // sposta dove il layout del menu lascia spazio.
+            if (!subtitlesPlaced && VoiceSubtitles.Instance != null)
+            {
+                VoiceSubtitles.Instance.SetPlacement(subtitlesPlacement);
+                subtitlesPlaced = true;
+            }
+
             if (loading) return;
 
             if (!welcomeSpoken)
@@ -143,12 +156,23 @@ namespace HapticResearch.Menu
                 }
         }
 
-        // Pubblico: richiamato anche dal bottone "Ripeti annuncio" della UI operatore.
-        public void AnnounceOptions()
+        // Pubblico: richiamato anche dal bottone "Ripeti annuncio" della UI operatore
+        // (UnityEvent: deve restare void).
+        public void AnnounceOptions() => TryAnnounceOptions(out _);
+
+        // Ritorna true se la traccia e' partita; altrimenti il motivo in 'reason'.
+        public bool TryAnnounceOptions(out string reason)
         {
+            reason = null;
             var nm = NarrationManager.Instance;
-            if (nm != null && nm.Has(menuKey)) nm.Speak(menuKey);
-            else Debug.LogWarning($"[MainMenu] Traccia '{menuKey}' mancante: genera le voci con Tools/generate_voice_macos.py.");
+            if (nm != null && nm.Has(menuKey))
+            {
+                nm.Speak(menuKey);
+                return true;
+            }
+            Debug.LogWarning($"[MainMenu] Traccia '{menuKey}' mancante: genera le voci con Tools/generate_voice_macos.py.");
+            reason = "traccia vocale mancante";
+            return false;
         }
 
         // Selezione per indice della lista livelli: comodo per i bottoni UI (onClick con
@@ -160,9 +184,15 @@ namespace HapticResearch.Menu
         }
 
         // Conferma parlata, poi carica la scena. Pubblico: usabile anche da UI operatore.
-        public void SelectLevel(MenuLevelEntry level)
+        public void SelectLevel(MenuLevelEntry level) => TrySelectLevel(level, out _);
+
+        // Come sopra, ma ritorna true solo se il caricamento e' partito e, se no, il
+        // motivo in 'reason' (per i sottotitoli).
+        public bool TrySelectLevel(MenuLevelEntry level, out string reason)
         {
-            if (loading || level == null) return;
+            reason = null;
+            if (loading) { reason = "caricamento in corso"; return false; }
+            if (level == null) { reason = "livello non configurato"; return false; }
             var nm = NarrationManager.Instance;
 
             // Scena presente nella build? Se no, avvisa e resta nel menu (es. Level 2 non
@@ -171,7 +201,8 @@ namespace HapticResearch.Menu
             {
                 Debug.LogWarning($"[MainMenu] Scena '{level.SceneName}' non caricabile (manca dalla Scene List?).");
                 if (nm != null && nm.Has("menu_not_available")) nm.Speak("menu_not_available");
-                return;
+                reason = "scena non disponibile";
+                return false;
             }
 
             loading = true;
@@ -184,6 +215,7 @@ namespace HapticResearch.Menu
             float deadline = Time.time + 5f;
             SceneFader.LoadSceneWithFade(level.SceneName,
                 () => nm == null || !nm.IsSpeaking || Time.time >= deadline);
+            return true;
         }
 
         // --- Riconoscimento vocale (SOLO Windows) -------------------------------------
@@ -191,8 +223,9 @@ namespace HapticResearch.Menu
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
         private KeywordRecognizer recognizer;
         private bool voiceEnabled = true;
-        private readonly Dictionary<string, Action> actions =
-            new Dictionary<string, Action>(StringComparer.OrdinalIgnoreCase);
+        // Frase -> azione. L'azione ritorna il motivo del rifiuto, null se eseguita.
+        private readonly Dictionary<string, Func<string>> actions =
+            new Dictionary<string, Func<string>>(StringComparer.OrdinalIgnoreCase);
 
         private void BuildVocabularyAndStart()
         {
@@ -202,10 +235,12 @@ namespace HapticResearch.Menu
                 if (level == null || level.Phrases == null) continue;
                 var captured = level; // evita la capture della variabile di ciclo
                 foreach (var p in level.Phrases)
-                    if (!string.IsNullOrWhiteSpace(p)) actions[p.Trim()] = () => SelectLevel(captured);
+                    if (!string.IsNullOrWhiteSpace(p))
+                        actions[p.Trim()] = () => TrySelectLevel(captured, out var why) ? null : why;
             }
             foreach (var p in repeatPhrases)
-                if (!string.IsNullOrWhiteSpace(p)) actions[p.Trim()] = AnnounceOptions;
+                if (!string.IsNullOrWhiteSpace(p))
+                    actions[p.Trim()] = () => TryAnnounceOptions(out var why) ? null : why;
 
             if (actions.Count == 0) return;
 
@@ -227,8 +262,27 @@ namespace HapticResearch.Menu
 
         private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
         {
-            if (!voiceEnabled || loading) return;
-            if (actions.TryGetValue(args.text, out var action)) action.Invoke();
+            string confidence = args.confidence.ToString();
+            if (!voiceEnabled)
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "microfono muto");
+                return;
+            }
+            if (loading)
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "caricamento in corso");
+                return;
+            }
+            if (actions.TryGetValue(args.text, out var action))
+            {
+                // Esito DOPO l'azione: "due" col labirinto non in build risulta ignorato.
+                string reason = action();
+                VoiceSubtitles.ReportHeard(args.text, confidence, reason == null, reason);
+            }
+            else
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "frase non in vocabolario");
+            }
         }
 
         private void ToggleVoice()

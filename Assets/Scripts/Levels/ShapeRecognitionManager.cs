@@ -3,6 +3,7 @@ using UnityEngine;
 using HapticResearch.Experiment;
 using HapticResearch.Haptics;
 using HapticResearch.Audio;
+using HapticResearch.UI;
 
 namespace HapticResearch.Levels
 {
@@ -508,7 +509,10 @@ namespace HapticResearch.Levels
                 else nm.Speak(key);
                 return;
             }
-            PlayOneShot(fallback); // nessuna traccia vocale: comportamento audio originale
+            // Nessuna traccia vocale: comportamento audio originale. Il testo va comunque
+            // nei sottotitoli, cosi' l'operatore vede cosa e' stato chiesto.
+            if (fallback != null) VoiceSubtitles.ReportSaid(VoiceLines.TextOf(key) ?? $"[{key}]", fallback.length);
+            PlayOneShot(fallback);
         }
 
         private void StartHoldAudio()

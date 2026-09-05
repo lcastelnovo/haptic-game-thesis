@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HapticResearch.Levels;
 using HapticResearch.Experiment;
+using HapticResearch.UI;
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
 using UnityEngine.Windows.Speech;
 #endif
@@ -185,10 +186,22 @@ namespace HapticResearch.Voice
 
         private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
         {
-            if (!voiceEnabled) return;
-            if (!actions.TryGetValue(args.text, out var action)) return;
+            // Ogni frase riconosciuta finisce nei sottotitoli, anche se poi non fa nulla:
+            // l'operatore vede il perche' invece di chiedersi se il microfono funziona.
+            string confidence = args.confidence.ToString();
+            if (!voiceEnabled)
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "microfono muto");
+                return;
+            }
+            if (!actions.TryGetValue(args.text, out var action))
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "frase non in vocabolario");
+                return;
+            }
 
             lastRecognized = args.text;
+            VoiceSubtitles.ReportHeard(args.text, confidence, true);
             if (commandAckClip != null) ackSource.PlayOneShot(commandAckClip);
             sessionLogger?.Log(levelId, "voice_command",
                 "{\"phrase\":\"" + args.text + "\",\"confidence\":\"" + args.confidence + "\"}");

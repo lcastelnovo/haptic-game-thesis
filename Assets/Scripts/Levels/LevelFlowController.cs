@@ -85,16 +85,23 @@ namespace HapticResearch.Levels
 
         // Pubblico: usato da tasto, voce e bottone a schermo. Attivo SOLO a livello
         // completato: durante la partita "avanti" detto per sbaglio non fa nulla.
-        public void GoToNextLevel()
+        public void GoToNextLevel() => TryGoToNextLevel(out _);
+
+        // Come sopra, ma dice anche PERCHE' non e' partito (per i sottotitoli): ritorna
+        // true solo se il caricamento e' iniziato davvero.
+        public bool TryGoToNextLevel(out string reason)
         {
-            if (loading || manager == null || !manager.IsComplete) return;
+            reason = null;
+            if (loading) { reason = "caricamento in corso"; return false; }
+            if (manager == null || !manager.IsComplete) { reason = "livello non ancora completato"; return false; }
             var nm = NarrationManager.Instance;
 
             if (string.IsNullOrEmpty(nextSceneName) || !Application.CanStreamedLevelBeLoaded(nextSceneName))
             {
                 Debug.LogWarning($"[LevelFlow] Scena '{nextSceneName}' non caricabile (manca dalla Scene List?).");
                 if (nm != null && nm.Has("menu_not_available")) nm.Speak("menu_not_available");
-                return;
+                reason = "scena non disponibile";
+                return false;
             }
 
             loading = true;
@@ -106,6 +113,7 @@ namespace HapticResearch.Levels
             float deadline = Time.time + 5f;
             SceneFader.LoadSceneWithFade(nextSceneName,
                 () => nm == null || !nm.IsSpeaking || Time.time >= deadline);
+            return true;
         }
 
         // --- Riconoscimento vocale (SOLO Windows) -------------------------------------
@@ -130,7 +138,13 @@ namespace HapticResearch.Levels
             }
         }
 
-        private void OnPhraseRecognized(PhraseRecognizedEventArgs args) => GoToNextLevel();
+        private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
+        {
+            // L'esito va nei sottotitoli DOPO la decisione: cosi' "avanti" con il
+            // labirinto non in build risulta ignorato, non eseguito.
+            bool started = TryGoToNextLevel(out var reason);
+            VoiceSubtitles.ReportHeard(args.text, args.confidence.ToString(), started, reason);
+        }
 
         void OnDestroy()
         {
