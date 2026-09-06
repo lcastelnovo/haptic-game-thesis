@@ -22,8 +22,13 @@ VR nativo con OpenXR + SteamVR e tracking opzionale via Vive Tracker.
 
 Niente CI, niente Makefile. Aprire da Unity Hub.
 
-- Scene principali: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/ViveTrackerScene.unity`
+- Scene template: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/ViveTrackerScene.unity`
   (la `old.unity` è vecchia, da non toccare salvo recupero asset)
+- Scene di gioco (Scene List, in ordine): `MainMenu.unity` → `Level1_ShapeRecognition.unity`
+  → `Labyrinth.unity` (Level 2). Ognuna si cabla con il suo tool editor (menu
+  `HapticResearch/...`, anche headless con `-executeMethod`): `MenuSceneSetupTool`,
+  `Level1SetupTool`, `LabyrinthSetupTool`. `SceneDumpTool` scrive un dump testuale di
+  una scena (gerarchia, componenti, campi) per confrontarle senza aprire l'editor
 - Build: File → Build Settings → PC Standalone
 - Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
   middleware il gioco gira ma forza/temperatura/texture non escono
@@ -151,6 +156,26 @@ Apprendimento braille a 3 livelli:
 - `Scenario1SubManager` — placement oggetti su griglia
 - `Scenario2Manager` — lettura braille con resize griglia per livello (1×2 → 1×5 → 2×5)
 
+### Livelli (`Assets/Scripts/Levels/`)
+- `LevelController` — base astratta di ogni livello (id, numero, titolo, stato,
+  `StatusLine`, `ElapsedSeconds`, `StartLevel`, `RepeatAnnouncement`). Chi ha bisogno
+  "del livello della scena" usa `LevelController.Find()`: comandi vocali, HUD, menu
+  in-level, flusso di fine livello e demo girano identici in tutti i livelli
+- `ShapeRecognitionManager` — Level 1: annuncia una forma, il partecipante la afferra e la
+  tiene 5 s per confermare; 4 forme in ordine casuale
+- `LabyrinthManager` — Level 2: prima trova l'ingresso (faro sonoro 2D che batte più
+  veloce avvicinandosi), poi segue il corridoio con l'indice fino all'uscita passando
+  per le tappe (`MazeZone`: ingresso, checkpoint, uscita, in ordine, solo XZ). Tocco
+  muro = colpetto + conteggio + log (`Collider.ClosestPoint` sulla punta proiettata a
+  y=0.9). Punte = `WeArtHapticObject` Index: demo ON → mani mouse sotto `HandManager`,
+  demo OFF → mani `WEART/Hands` mosse dai tracker. Il labirinto di Luca (34 cubi +
+  pad termici Caldino/Freddo) non ha un unico corridoio obbligato: le tappe sono
+  provvisorie nel corridoio in basso e si spostano dall'Inspector
+- `LevelFlowController` — a livello completato: suggerimento parlato, "avanti"/N (o
+  "menu"/N nel labirinto) → scena successiva; Invio = nuovo partecipante
+- `MainMenuManager` — benvenuto parlato in-level a livello fermo, R lo ripete
+- `OperatorControls` — pannello storico, si spegne da solo quando c'è l'`OperatorHud`
+
 ### Grid & Objects
 - `BuildGrid` (`Assets/Scripts/Grid/`) — snap grid 13×8, cell size 0.075m, niente overlap
 - `GrabbableObject` / `TouchableObject` (`Assets/Scripts/Objects/`) — physics grab con
@@ -164,7 +189,12 @@ Apprendimento braille a 3 livelli:
   chiave da `Resources/Voice/<chiave>.mp3`; `CurrentKey` = battuta in riproduzione
 - `VoiceLines` (`Assets/Scripts/Audio/`) — testi delle battute da
   `Assets/Resources/Voice/voice_lines.json`. È l'**unica fonte** dei testi: la leggono
-  sia gli script `Tools/generate_voice*.py` (per generare gli mp3) sia i sottotitoli
+  sia gli script `Tools/generate_voice*.py` (per generare gli mp3) sia i sottotitoli.
+  Per aggiungere una battuta: nuova chiave nel JSON, poi
+  `python3 Tools/generate_voice_macos.py --only <chiave>` (voce macOS Alice) o
+  `generate_voice.py` (ElevenLabs). Chiavi Level 2: `level2_*`, `menu_back`
+- Suoni sintetici del labirinto in `Assets/Audio/Level2/` (generati con ffmpeg:
+  colpetto muro, beep del faro, campanella checkpoint)
 - `VoiceSubtitles` (`Assets/Scripts/UI/`) — sottotitoli per l'operatore: riga SENTO
   (frase riconosciuta dal microfono, confidenza, esito) e riga DICO (testo della battuta
   in corso). Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
@@ -173,6 +203,18 @@ Apprendimento braille a 3 livelli:
   ogni frase con `VoiceSubtitles.ReportHeard(...)` DOPO che l'azione ha deciso
 - `TopCameraFitTable` (`Assets/Scripts/Camera/`) — ortho top-down fittata al tavolo
   (legacy desktop; in VR non viene usata)
+
+### HUD operatore (`Assets/Scripts/UI/`)
+- `OperatorHud` — interfaccia unica dell'operatore vedente (dal mockup grafico), uguale in
+  tutti i livelli, auto-installata nelle scene con un `LevelController` (non nel menu):
+  sidebar a sinistra (logo, livello e titolo, stato, righe hardware in sola lettura dal
+  SDK: middleware, TouchDIVER, calibrazione, Vive Tracker; bottoni Avvia/Ripeti/livello
+  successivo; footer tasti), pill in alto a destra (mani demo ON/OFF cliccabile,
+  partecipante, timer). Le camere su Display 1 vengono ristrette a destra della
+  sidebar. **F3** nasconde l'HUD. I pannelli storici (OperatorControls, toggle demo,
+  indicatore voce, watermark) si spengono da soli quando l'HUD è attivo
+- `HudTheme` — palette e font di sistema (Georgia/Consolas su Windows) condivisi
+- La vista 3D resta com'è nel codice: il mockup vale solo per sidebar, pill e barra
 
 ## Hardware Weart
 
@@ -228,6 +270,10 @@ da container — niente collider/rigidbody sul parent.
 | S / D | Ruota oggetto in mano |
 | F1 | Pannello diagnostico presa (guanti, bridge, grabPoint) |
 | F2 | Mostra / nasconde sottotitoli voce (SENTO / DICO) |
+| F3 | Mostra / nasconde HUD operatore |
+| Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
+| N | Livello successivo (Level 1) o torna al menu (Level 2), solo a livello completato |
+| M | Muta / riattiva il microfono |
 
 In VR la mappatura passa al controller / tracking nativo — la sorgente attiva è gestita
 da `HandInputManager`.

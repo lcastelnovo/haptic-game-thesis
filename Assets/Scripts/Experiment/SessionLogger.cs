@@ -36,19 +36,38 @@ namespace HapticResearch.Experiment
         private StreamWriter writer;
         private bool warnedNoWriter;
 
+        // Identita' della sessione portata da una scena all'altra: il logger e' per scena
+        // (un CSV per livello), ma il partecipante e' lo stesso. Se in questa scena l'id e'
+        // rimasto quello di default, si eredita quello impostato nella scena precedente.
+        private static string carriedParticipantId;
+        private static string carriedCondition;
+        private const string DefaultParticipantId = "anon";
+
         public string ParticipantId => participantId;
         public string Condition => condition;
         public string FilePath => filePath;
 
         void Awake()
         {
-            if (Instance != null && Instance != this)
+            // Un'istanza nella STESSA scena e' un doppione; una di un'altra scena e' quella
+            // che sta per essere distrutta col cambio scena (Awake nuovo prima di OnDestroy
+            // vecchio): in quel caso questa prende il posto.
+            if (Instance != null && Instance != this && Instance.gameObject.scene == gameObject.scene)
             {
-                Debug.LogWarning("[SessionLogger] Esiste già un'istanza: questo viene distrutto.");
+                Debug.LogWarning("[SessionLogger] Esiste già un'istanza in scena: questo viene distrutto.");
                 Destroy(this);
                 return;
             }
             Instance = this;
+
+            if (participantId == DefaultParticipantId && !string.IsNullOrEmpty(carriedParticipantId))
+            {
+                participantId = carriedParticipantId;
+                if (!string.IsNullOrEmpty(carriedCondition)) condition = carriedCondition;
+            }
+            carriedParticipantId = participantId;
+            carriedCondition = condition;
+
             OpenFile();
         }
 

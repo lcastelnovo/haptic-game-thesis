@@ -39,7 +39,10 @@ namespace HapticResearch.Audio
 
         void Awake()
         {
-            if (Instance != null && Instance != this)
+            // Al cambio scena Unity fa l'Awake della scena nuova PRIMA di distruggere la
+            // vecchia: se l'istanza esistente sta in un'altra scena, questa la sostituisce
+            // (l'altra sparira' con la sua scena e non tocca Instance: vedi OnDestroy).
+            if (Instance != null && Instance != this && Instance.gameObject.scene == gameObject.scene)
             {
                 Destroy(this);
                 return;

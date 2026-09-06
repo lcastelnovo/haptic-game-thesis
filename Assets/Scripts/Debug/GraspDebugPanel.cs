@@ -87,7 +87,8 @@ namespace HapticResearch.Debugging
             var content = new GUIContent(sb.ToString());
             var size = style.CalcSize(content);
             float x = OperatorHud.Active ? OperatorHud.ContentLeft + 10f : 10f; // non sopra la sidebar
-            GUI.Label(new Rect(x, 10f, size.x + 20f, size.y + 12f), content, style);
+            float y = OperatorHud.Active ? OperatorHud.TopInset + 10f : 10f;    // ne' sopra la pill
+            GUI.Label(new Rect(x, y, size.x + 20f, size.y + 12f), content, style);
         }
 
         // Chiusure formattate dei thimble di un lato (pollice..mignolo, 0-1).

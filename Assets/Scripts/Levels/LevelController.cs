@@ -44,5 +44,8 @@ namespace HapticResearch.Levels
             if (Current != null) return Current;
             return FindFirstObjectByType<LevelController>(FindObjectsInactive.Include);
         }
+
+        // Al cambio scena l'OnEnable del livello nuovo arriva PRIMA dell'OnDisable del
+        // vecchio: il vecchio non deve azzerare Current (gia' gestito da 'Current == this').
     }
 }

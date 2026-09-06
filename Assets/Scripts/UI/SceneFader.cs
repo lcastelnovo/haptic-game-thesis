@@ -37,7 +37,9 @@ namespace HapticResearch.UI
 
         private static void EnsureAndFadeIn()
         {
-            if (Instance == null)
+            // A sceneLoaded il fader della scena precedente puo' essere ancora vivo (viene
+            // distrutto subito dopo): se non sta nella scena attiva, se ne crea uno nuovo.
+            if (Instance == null || Instance.gameObject.scene != SceneManager.GetActiveScene())
             {
                 var go = new GameObject("SceneFader");
                 go.AddComponent<SceneFader>();
@@ -60,7 +62,7 @@ namespace HapticResearch.UI
 
         void Awake()
         {
-            if (Instance != null && Instance != this)
+            if (Instance != null && Instance != this && Instance.gameObject.scene == gameObject.scene)
             {
                 Destroy(gameObject);
                 return;

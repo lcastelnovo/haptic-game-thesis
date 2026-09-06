@@ -78,6 +78,7 @@ namespace HapticResearch.EditorTools
             bool menuCreated = EnsureMainMenu();
             bool flowCreated = EnsureLevelFlow();
             EnsureGraspDebugPanel();
+            EnsureSessionLogger();
             DisableTrackerDebugger();
 
             EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
@@ -304,6 +305,22 @@ namespace HapticResearch.EditorTools
         }
 
         // --- Pannello diagnostico presa (F1) ---------------------------------------------
+
+        // --- Logger di sessione (CSV in persistentDataPath/SessionLogs) ------------------
+
+        // Senza questo oggetto in scena SessionLogger.Instance e' null e gli eventi del
+        // livello NON vengono salvati. participantId si imposta da Inspector prima della sessione.
+        private static bool EnsureSessionLogger()
+        {
+            if (Object.FindFirstObjectByType<HapticResearch.Experiment.SessionLogger>(FindObjectsInactive.Include) != null)
+                return false;
+
+            var go = new GameObject("SessionLogger");
+            go.AddComponent<HapticResearch.Experiment.SessionLogger>();
+
+            Undo.RegisterCreatedObjectUndo(go, "Crea SessionLogger Level1");
+            return true;
+        }
 
         private static bool EnsureGraspDebugPanel()
         {

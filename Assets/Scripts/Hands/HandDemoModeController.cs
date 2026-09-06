@@ -83,14 +83,21 @@ namespace HapticResearch.Hands
         // Livello della scena: le mani sono usabili solo mentre il livello è avviato.
         private LevelController levelManager;
 
+        // Istanza che "possiede" gli static: al cambio scena il controller vecchio viene
+        // disabilitato DOPO l'OnEnable di quello nuovo e non deve azzerare il suo stato.
+        private static HandDemoModeController owner;
+
         private void OnEnable()
         {
+            owner = this;
             Exists = true;
             DemoActive = EvaluateAuto();
         }
 
         private void OnDisable()
         {
+            if (owner != this) return;
+            owner = null;
             Exists = false;
             DemoActive = false;
         }

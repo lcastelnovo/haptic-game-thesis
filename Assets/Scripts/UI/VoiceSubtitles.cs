@@ -142,11 +142,14 @@ namespace HapticResearch.UI
 
         private static void EnsureInstance()
         {
-            if (Instance != null) return;
+            // A sceneLoaded l'istanza della scena precedente puo' essere ancora viva: conta
+            // solo se sta nella scena attiva.
+            var active = SceneManager.GetActiveScene();
+            if (Instance != null && Instance.gameObject.scene == active) return;
             // Se la scena ne ha gia' uno (anche disabilitato apposta), si rispetta quello.
-            var existing = FindFirstObjectByType<VoiceSubtitles>(FindObjectsInactive.Include);
-            if (existing != null)
+            foreach (var existing in FindObjectsByType<VoiceSubtitles>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
+                if (existing.gameObject.scene != active) continue;
                 Instance = existing;
                 return;
             }
@@ -182,10 +185,10 @@ namespace HapticResearch.UI
 
         void Awake()
         {
-            if (Instance != null && Instance != this)
+            if (Instance != null && Instance != this && Instance.gameObject.scene == gameObject.scene)
             {
-                // Doppione: sparisce solo il componente, l'host resta intatto (potrebbe
-                // ospitare altri script del livello).
+                // Doppione nella stessa scena: sparisce solo il componente, l'host resta
+                // intatto (potrebbe ospitare altri script del livello).
                 Debug.LogWarning($"[VoiceSubtitles] Doppione su '{gameObject.name}': rimosso, resta quello su '{Instance.gameObject.name}'.");
                 Destroy(this);
                 return;

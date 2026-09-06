@@ -25,6 +25,7 @@ namespace HapticResearch.UI
 
         private static readonly Dictionary<Color, Texture2D> solids = new Dictionary<Color, Texture2D>();
         private static readonly Dictionary<string, Font> fonts = new Dictionary<string, Font>();
+        private static HashSet<string> installedFonts; // enumerati una volta sola
 
         private static readonly string[] SerifNames = { "Georgia", "Times New Roman", "Times" };
         private static readonly string[] MonoNames = { "Consolas", "Menlo", "Courier New", "Courier" };
@@ -58,7 +59,8 @@ namespace HapticResearch.UI
             f = null;
             try
             {
-                var available = new HashSet<string>(Font.GetOSInstalledFontNames());
+                installedFonts ??= new HashSet<string>(Font.GetOSInstalledFontNames());
+                var available = installedFonts;
                 foreach (var n in names)
                 {
                     if (!available.Contains(n)) continue;

@@ -12,5 +12,14 @@
   "level1_next_hint": "Per passare al livello successivo, il labirinto, dì: avanti, oppure premi N. Per far giocare un nuovo partecipante premi Invio.",
   "answer_correct": "Esatto, molto bene.",
   "answer_wrong": "Non è quella giusta. Rilascia la forma e riprova.",
-  "level_complete": "Complimenti, hai riconosciuto tutte le forme. Livello completato."
+  "level_complete": "Complimenti, hai riconosciuto tutte le forme. Livello completato.",
+  "level2_welcome": "Livello due: il labirinto. Quando sei pronto, premi Invio, oppure dì: avvia, per iniziare. Premi R per riascoltare questo messaggio.",
+  "level2_intro": "In questo livello c'è un labirinto appoggiato sul tavolo: un corridoio tra muri bassi che puoi sentire con le dita. Per prima cosa cerca l'ingresso: quando smetto di parlare sentirai un suono che batte più veloce e più acuto man mano che la mano si avvicina. Quando ci sei, appoggia l'indice e segui il corridoio fino all'uscita, tenendo il dito tra i muri. Se tocchi un muro senti un colpetto. Sei pronto? Si comincia.",
+  "level2_find_entrance": "Cerca l'ingresso del labirinto: segui il suono, batte più veloce quando ti avvicini.",
+  "level2_entered": "Sei all'ingresso. Ora segui il corridoio con il dito fino all'uscita.",
+  "level2_checkpoint": "Bene, sei a metà strada. Continua così.",
+  "level2_complete": "Complimenti, sei arrivato all'uscita. Livello completato.",
+  "level2_next_hint": "Per tornare al menu principale dì: menu, oppure premi N. Per far giocare un nuovo partecipante premi Invio.",
+  "menu_back": "Torno al menu principale.",
+  "level2_follow": "Segui il corridoio con il dito fino all'uscita, tenendo il dito tra i muri. Se tocchi un muro senti un colpetto."
 }

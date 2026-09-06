@@ -203,6 +203,8 @@ namespace HapticResearch.Voice
             lastRecognized = args.text;
             VoiceSubtitles.ReportHeard(args.text, confidence, true);
             if (commandAckClip != null) ackSource.PlayOneShot(commandAckClip);
+            // Fetch pigro: il SessionLogger potrebbe fare Awake dopo di noi.
+            if (sessionLogger == null) sessionLogger = SessionLogger.Instance;
             sessionLogger?.Log(levelId, "voice_command",
                 "{\"phrase\":\"" + args.text + "\",\"confidence\":\"" + args.confidence + "\"}");
             action.Invoke();
