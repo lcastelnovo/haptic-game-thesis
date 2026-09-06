@@ -23,8 +23,9 @@ namespace HapticResearch.UI
     // Si auto-installa a ogni scena (come SceneFader): niente da aggiungere nelle scene.
     // Per ritoccare i parametri da Inspector basta mettere il componente su un GameObject
     // qualsiasi della scena: l'auto-install lo trova e non crea doppioni. La posizione
-    // (Placement) e' per scena: in Level1 in basso al centro, nel menu in alto a sinistra
-    // perche' in basso ci sono i crediti (lo imposta MainMenuSceneController).
+    // (Placement) e' per scena: nel menu in alto a sinistra perche' in basso ci sono i
+    // crediti (lo imposta MainMenuSceneController); nei livelli, con l'HUD operatore
+    // attivo, diventa la BARRA in basso allineata alla sidebar (stile del mockup).
     public class VoiceSubtitles : MonoBehaviour
     {
         public static VoiceSubtitles Instance { get; private set; }
@@ -60,6 +61,13 @@ namespace HapticResearch.UI
         [SerializeField] private float minWidth = 480f;
         [SerializeField] private float maxWidth = 1000f;
 
+        [Header("Barra (con HUD operatore)")]
+        [SerializeField] private float barMargin = 20f;
+        [SerializeField] private float barPadding = 14f;
+        [SerializeField] private int barFontSize = 21;
+        [SerializeField] private float badgeWidth = 82f;
+        [SerializeField] private float badgeHeight = 30f;
+
         [Header("Tempi")]
         [Tooltip("Secondi per cui l'ultima frase riconosciuta resta in evidenza.")]
         [SerializeField] private float heardHoldSeconds = 6f;
@@ -89,6 +97,10 @@ namespace HapticResearch.UI
         private bool styleReady;
         private GUIStyle lineStyle;
         private Texture2D bg;
+
+        // Stili della barra (HUD).
+        private GUIStyle barStyle, badgeHeardStyle, badgeSaidStyle;
+        private Texture2D barBg, barAccent, barAccentLight, barDim, badgeHeardTex, badgeSaidTex;
 
         private const string TagColor = "#00A3E0"; // azzurro UniBS
         private const string DimColor = "#9AA4AE";
@@ -247,6 +259,12 @@ namespace HapticResearch.UI
             if (!visible) return;
             EnsureStyle();
 
+            if (OperatorHud.Active)
+            {
+                DrawBar();
+                return;
+            }
+
             bool corner = placement != Placement.BottomCenter;
             float fraction = corner ? cornerWidthFraction : widthFraction;
             float width = Mathf.Clamp(Screen.width * fraction, minWidth, Mathf.Min(maxWidth, Screen.width - 2f * cornerMargin));
@@ -269,29 +287,88 @@ namespace HapticResearch.UI
             GUI.Label(new Rect(x, y, width, height), content, lineStyle);
         }
 
-        private string HeardLine()
+        // --- Barra in basso (HUD operatore) --------------------------------------------
+
+        private void DrawBar()
         {
-            string head = $"{Tag("SENTO")} <color={DimColor}>[{MicStatus()}]</color> ";
+            float left = OperatorHud.ContentLeft + barMargin;
+            float width = Screen.width - left - barMargin;
+            const float accent = 4f;
+            const float iconWidth = 34f;
+            float textLeft = accent + barPadding + badgeWidth + barPadding;
+            float textWidth = width - textLeft - barPadding - iconWidth - barPadding;
+
+            var heard = new GUIContent(HeardText());
+            var said = new GUIContent(SaidText());
+            float hHeard = Mathf.Max(badgeHeight, barStyle.CalcHeight(heard, textWidth));
+            float hSaid = Mathf.Max(badgeHeight, barStyle.CalcHeight(said, textWidth));
+            const float rowGap = 10f;
+            float height = barPadding + hHeard + rowGap + hSaid + barPadding;
+
+            var rect = new Rect(left, Screen.height - barMargin - height, width, height);
+            GUI.DrawTexture(rect, barBg);
+            GUI.DrawTexture(new Rect(rect.x, rect.y, accent, rect.height), barAccent);
+
+            float y = rect.y + barPadding;
+            DrawBarRow(rect, y, hHeard, textLeft, textWidth, "SENTO", badgeHeardTex, badgeHeardStyle, heard);
+            y += hHeard + rowGap;
+            DrawBarRow(rect, y, hSaid, textLeft, textWidth, "DICO", badgeSaidTex, badgeSaidStyle, said);
+
+            DrawLevelIcon(new Rect(rect.xMax - barPadding - iconWidth, rect.y + barPadding, iconWidth, hHeard), speakingNow);
+        }
+
+        private void DrawBarRow(Rect bar, float y, float rowHeight, float textLeft, float textWidth,
+            string badge, Texture2D badgeTex, GUIStyle badgeStyle, GUIContent text)
+        {
+            // Badge allineato alla prima riga di testo (in alto se il testo va a capo).
+            var badgeRect = new Rect(bar.x + 4f + barPadding, y + Mathf.Max(0f, (Mathf.Min(rowHeight, badgeHeight + 6f) - badgeHeight) * 0.5f), badgeWidth, badgeHeight);
+            GUI.DrawTexture(badgeRect, badgeTex);
+            GUI.Label(badgeRect, badge, badgeStyle);
+            GUI.Label(new Rect(bar.x + textLeft, y, textWidth, rowHeight), text, barStyle);
+        }
+
+        // Tre barrette che "respirano" mentre la voce parla (indicatore livello audio).
+        private void DrawLevelIcon(Rect area, bool speaking)
+        {
+            const int bars = 3;
+            const float bw = 5f, gap = 4f;
+            float x0 = area.x + (area.width - (bars * bw + (bars - 1) * gap)) * 0.5f;
+            float maxH = Mathf.Min(area.height, 26f);
+            float cy = area.y + area.height * 0.5f;
+            for (int i = 0; i < bars; i++)
+            {
+                float k = speaking ? 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f + i * 1.3f)) : 0.3f;
+                float bh = maxH * k;
+                GUI.DrawTexture(new Rect(x0 + i * (bw + gap), cy - bh * 0.5f, bw, bh), speaking ? barAccentLight : barDim);
+            }
+        }
+
+        private string HeardText()
+        {
+            string status = $"<color={DimColor}>[{MicStatus()}]</color> ";
             float age = Time.unscaledTime - heardAt;
             if (heardPhrase == null || age > heardHoldSeconds)
-                return head + $"<color={DimColor}>nessun comando recente</color>";
+                return status + $"<color={DimColor}>nessun comando recente</color>";
 
             string outcome = heardExecuted
                 ? $"<color={OkColor}>eseguito</color>"
                 : $"<color={WarnColor}>ignorato{(string.IsNullOrEmpty(heardNote) ? "" : ": " + heardNote)}</color>";
-            return head + $"«{heardPhrase}»  ({ConfidenceIt(heardConfidence)})  {outcome}";
+            return status + $"«{heardPhrase}»  ({ConfidenceIt(heardConfidence)})  {outcome}";
         }
 
-        private string SaidLine()
+        private string SaidText()
         {
-            string head = Tag("DICO") + " ";
-            if (speakingNow) return head + lastSaidText;
-
+            if (speakingNow) return lastSaidText;
             float age = Time.unscaledTime - saidEndedAt;
             if (lastSaidText != null && age <= saidHoldSeconds)
-                return head + $"<color={HoldColor}>{lastSaidText}</color>";
-            return head + $"<color={DimColor}>—</color>";
+                return $"<color={HoldColor}>{lastSaidText}</color>";
+            return $"<color={DimColor}>—</color>";
         }
+
+        // --- Riquadro compatto (senza HUD: menu) --------------------------------------
+
+        private string HeardLine() => Tag("SENTO") + " " + HeardText();
+        private string SaidLine() => Tag("DICO") + " " + SaidText();
 
         private static string Tag(string name) => $"<color={TagColor}>{name}</color>";
 
@@ -339,6 +416,17 @@ namespace HapticResearch.UI
                 alignment = TextAnchor.MiddleLeft,
                 padding = new RectOffset(14, 14, 8, 8)
             };
+
+            // Barra stile mockup: fondo scuro, bordo sinistro blu, badge SENTO/DICO.
+            barBg = HudTheme.Solid(new Color(HudTheme.Bg.r, HudTheme.Bg.g, HudTheme.Bg.b, 0.92f));
+            barAccent = HudTheme.Solid(HudTheme.Accent);
+            barAccentLight = HudTheme.Solid(HudTheme.AccentLight);
+            barDim = HudTheme.Solid(HudTheme.Grey);
+            badgeHeardTex = HudTheme.Solid(HudTheme.BadgeHeard);
+            badgeSaidTex = HudTheme.Solid(HudTheme.Accent);
+            barStyle = HudTheme.Label(HudTheme.Sans(barFontSize), barFontSize, Color.white, FontStyle.Normal, TextAnchor.UpperLeft, true);
+            badgeHeardStyle = HudTheme.Label(HudTheme.Mono(14), 14, HudTheme.BadgeHeardText, FontStyle.Bold, TextAnchor.MiddleCenter);
+            badgeSaidStyle = HudTheme.Label(HudTheme.Mono(14), 14, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter);
             styleReady = true;
         }
     }

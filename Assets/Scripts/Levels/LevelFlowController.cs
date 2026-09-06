@@ -20,8 +20,8 @@ namespace HapticResearch.Levels
     public class LevelFlowController : MonoBehaviour
     {
         [Header("Riferimenti")]
-        [Tooltip("Se null, cerca uno ShapeRecognitionManager in scena all'avvio.")]
-        [SerializeField] private ShapeRecognitionManager manager;
+        [Tooltip("Se null, cerca il LevelController della scena all'avvio.")]
+        [SerializeField] private LevelController manager;
 
         [Header("Livello successivo")]
         [Tooltip("Nome della scena del livello successivo (deve stare nella Scene List).")]
@@ -29,6 +29,9 @@ namespace HapticResearch.Levels
 
         [Tooltip("Tasto che porta al livello successivo (attivo solo a livello completato).")]
         [SerializeField] private KeyCode nextLevelKey = KeyCode.N;
+
+        [Tooltip("Etichetta del bottone operatore a fine livello (HUD).")]
+        [SerializeField] private string nextButtonLabel = "Vai al livello 2";
 
         [Tooltip("Frasi vocali per andare avanti (attive solo a livello completato).")]
         [SerializeField] private string[] nextPhrases = { "avanti", "prossimo livello", "vai avanti", "livello successivo" };
@@ -43,17 +46,18 @@ namespace HapticResearch.Levels
         private bool hintSpoken;
         private bool loading;
 
+        // Per l'HUD operatore: bottone visibile solo quando si puo' davvero andare avanti.
+        public bool CanGoNext => !loading && manager != null && manager.IsComplete;
+        public string NextButtonLabel => nextButtonLabel;
+        public KeyCode NextLevelKey => nextLevelKey;
+
         // Stile bottone operatore (creato lazy in OnGUI).
         private bool styleReady;
         private GUIStyle buttonStyle;
 
         void Awake()
         {
-            if (manager == null)
-            {
-                var found = FindObjectsByType<ShapeRecognitionManager>(FindObjectsSortMode.None);
-                if (found.Length > 0) manager = found[0];
-            }
+            if (manager == null) manager = LevelController.Find();
         }
 
         void Start()
@@ -160,11 +164,12 @@ namespace HapticResearch.Levels
 
         void OnGUI()
         {
-            if (manager == null || !manager.IsComplete || loading) return;
+            // Con l'HUD operatore il bottone sta nella sidebar.
+            if (manager == null || !manager.IsComplete || loading || OperatorHud.Active) return;
             EnsureStyle();
 
             var rect = new Rect(Screen.width * 0.5f - 160f, Screen.height - 70f, 320f, 44f);
-            if (GUI.Button(rect, "Vai al livello 2  (N)", buttonStyle))
+            if (GUI.Button(rect, $"{nextButtonLabel}  ({nextLevelKey})", buttonStyle))
                 GoToNextLevel();
         }
 

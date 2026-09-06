@@ -17,8 +17,8 @@ namespace HapticResearch.Levels
     public class MainMenuManager : MonoBehaviour
     {
         [Header("Riferimenti")]
-        [Tooltip("Se null, cerca uno ShapeRecognitionManager in scena all'avvio.")]
-        [SerializeField] private ShapeRecognitionManager manager;
+        [Tooltip("Se null, cerca il LevelController della scena all'avvio.")]
+        [SerializeField] private LevelController manager;
 
         [Header("Benvenuto")]
         [Tooltip("Chiave della traccia vocale in Resources/Voice (testi in Resources/Voice/voice_lines.json).")]
@@ -39,11 +39,7 @@ namespace HapticResearch.Levels
 
         void Awake()
         {
-            if (manager == null)
-            {
-                var found = FindObjectsByType<ShapeRecognitionManager>(FindObjectsSortMode.None);
-                if (found.Length > 0) manager = found[0];
-            }
+            if (manager == null) manager = LevelController.Find();
 
             // Sorgente 2D dedicata al solo fallback: udibile sempre.
             fallbackSource = gameObject.AddComponent<AudioSource>();

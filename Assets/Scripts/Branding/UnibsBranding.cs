@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HapticResearch.Levels;
 
+using HapticResearch.UI;
 namespace HapticResearch.Branding
 {
     /// <summary>
@@ -14,6 +15,9 @@ namespace HapticResearch.Branding
     {
         [Header("Logo (assegna Assets/Textures/UnibsLogo)")]
         [SerializeField] private Texture2D logo;
+
+        // Letto dall'HUD operatore per l'intestazione della sidebar.
+        public Texture2D Logo => logo;
 
         [Header("Watermark a schermo")]
         [SerializeField] private bool showWatermark = true;
@@ -132,7 +136,8 @@ namespace HapticResearch.Branding
 
         private void OnGUI()
         {
-            if (!showWatermark || logo == null)
+            // Con l'HUD operatore il logo sta nell'intestazione della sidebar.
+            if (!showWatermark || logo == null || OperatorHud.Active)
                 return;
 
             float aspect = logo.height > 0 ? (float)logo.width / logo.height : 1f;

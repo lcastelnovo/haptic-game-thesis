@@ -5,6 +5,7 @@ using HapticResearch.Haptics;
 using HapticResearch.Levels;
 using HapticResearch.Hands;
 
+using HapticResearch.UI;
 namespace HapticResearch.Debugging
 {
     // Pannello diagnostico a schermo per il percorso di presa coi guanti (toggle F1).
@@ -85,7 +86,8 @@ namespace HapticResearch.Debugging
 
             var content = new GUIContent(sb.ToString());
             var size = style.CalcSize(content);
-            GUI.Label(new Rect(10f, 10f, size.x + 20f, size.y + 12f), content, style);
+            float x = OperatorHud.Active ? OperatorHud.ContentLeft + 10f : 10f; // non sopra la sidebar
+            GUI.Label(new Rect(x, 10f, size.x + 20f, size.y + 12f), content, style);
         }
 
         // Chiusure formattate dei thimble di un lato (pollice..mignolo, 0-1).

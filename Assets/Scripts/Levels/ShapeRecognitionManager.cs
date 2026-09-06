@@ -18,7 +18,7 @@ namespace HapticResearch.Levels
     //
     // La forma "tenuta" è letta da HandGrabController/GloveGrabController.CurrentGrabbable,
     // così funziona sia col mouse (desktop) sia col guanto (VR), senza toccare quei file.
-    public class ShapeRecognitionManager : MonoBehaviour
+    public class ShapeRecognitionManager : LevelController
     {
         private enum State { Idle, AwaitingSelection, LevelComplete }
 
@@ -78,6 +78,10 @@ namespace HapticResearch.Levels
         [SerializeField] private SessionLogger sessionLogger;
         [SerializeField] private string levelId = "level1_shape_recognition";
 
+        [Header("Identita' (HUD operatore)")]
+        [SerializeField] private int levelNumber = 1;
+        [SerializeField] private string levelTitle = "Riconoscimento forme";
+
         // --- runtime ---
         private State state = State.Idle;
 
@@ -109,13 +113,38 @@ namespace HapticResearch.Levels
         private float cooldownTimer;
         private int currentRoundErrors;
         private float roundStartTime;
+        private float levelStartTime = -1f; // Time.time del via (-1 = mai partito)
+        private float levelEndTime = -1f;   // Time.time del completamento (-1 = in corso)
 
-        // --- stato pubblico (per il pannello operatore) ---
-        public bool IsRunning => state == State.AwaitingSelection;
-        public bool IsComplete => state == State.LevelComplete;
+        // --- stato pubblico (LevelController: HUD, voce, flusso) ---
+        public override string LevelId => levelId;
+        public override int LevelNumber => levelNumber;
+        public override string LevelTitle => levelTitle;
+        public override bool IsRunning => state == State.AwaitingSelection;
+        public override bool IsComplete => state == State.LevelComplete;
         public string CurrentTargetId => currentTarget != null ? currentTarget.Id : "-";
         public int CurrentRound => Mathf.Clamp(roundIndex + 1, 0, roundOrder.Count);
         public int TotalRounds => roundOrder.Count;
+
+        public override string StatusLine
+        {
+            get
+            {
+                if (IsComplete) return "completato";
+                if (IsRunning) return $"round {CurrentRound}/{TotalRounds} · trova: {CurrentTargetId}";
+                return "in attesa di avvio";
+            }
+        }
+
+        public override float ElapsedSeconds
+        {
+            get
+            {
+                if (levelStartTime < 0f) return 0f;
+                float end = levelEndTime >= 0f ? levelEndTime : Time.time;
+                return end - levelStartTime;
+            }
+        }
 
         void Awake()
         {
@@ -275,7 +304,7 @@ namespace HapticResearch.Levels
             UpdateHold();
         }
 
-        public void StartLevel()
+        public override void StartLevel()
         {
             // Richiamabile in qualsiasi stato: l'operatore può avviare o riavviare/abortire.
             if (activeShapes.Count == 0)
@@ -292,6 +321,8 @@ namespace HapticResearch.Levels
             BuildRoundOrder();
             roundIndex = -1;
             ignoredShape = null;
+            levelStartTime = Time.time;
+            levelEndTime = -1f;
             // Istruzioni parlate iniziali; il primo annuncio (in NextRound) viene ACCODATO cosi'
             // parte solo quando le istruzioni sono finite, senza sovrapporsi.
             Voice("instructions_intro", levelStartClip, false);
@@ -343,7 +374,7 @@ namespace HapticResearch.Levels
         }
 
         // L'operatore può ri-annunciare il bersaglio (repeatKey, bottone UI o comando vocale).
-        public void RepeatAnnouncement()
+        public override void RepeatAnnouncement()
         {
             if (state == State.AwaitingSelection) AnnounceTarget(false); // subito, interrompe
         }
@@ -483,6 +514,7 @@ namespace HapticResearch.Levels
         private void LevelComplete()
         {
             state = State.LevelComplete;
+            levelEndTime = Time.time;
             currentTarget = null;
             StopHoldAudio();
             Voice("level_complete", levelCompleteClip, true); // dopo l'ultimo "esatto" accodato

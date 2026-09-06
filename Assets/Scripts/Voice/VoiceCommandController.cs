@@ -34,8 +34,8 @@ namespace HapticResearch.Voice
         public enum VoiceConfidence { High, Medium, Low }
 
         [Header("Riferimenti")]
-        [Tooltip("Se null, cerca uno ShapeRecognitionManager in scena all'avvio.")]
-        [SerializeField] private ShapeRecognitionManager manager;
+        [Tooltip("Se null, cerca il LevelController della scena all'avvio (Level1 o labirinto).")]
+        [SerializeField] private LevelController manager;
 
         [Header("Attivazione")]
         [Tooltip("Il microfono parte in ascolto all'avvio della scena.")]
@@ -91,7 +91,7 @@ namespace HapticResearch.Voice
 
         void Awake()
         {
-            if (manager == null) manager = FindFirstObjectByType<ShapeRecognitionManager>();
+            if (manager == null) manager = LevelController.Find();
             sessionLogger = SessionLogger.Instance;
 
             // AudioSource 2D dedicato: la conferma "comando ricevuto" si sente sempre.
@@ -143,7 +143,7 @@ namespace HapticResearch.Voice
         {
             if (manager == null)
             {
-                Debug.LogWarning("[VoiceCommand] Nessun ShapeRecognitionManager in scena: comandi vocali disattivati.");
+                Debug.LogWarning("[VoiceCommand] Nessun LevelController in scena: comandi vocali disattivati.");
                 return;
             }
 
@@ -232,7 +232,8 @@ namespace HapticResearch.Voice
 
         void OnGUI()
         {
-            if (!showStatus) return;
+            // Con l'HUD operatore attivo lo stato voce sta nella barra SENTO/DICO.
+            if (!showStatus || OperatorHud.Active) return;
             EnsureStyle();
 
             var rect = new Rect(Screen.width - 340f, Screen.height - 34f, 328f, 26f);

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+using HapticResearch.UI;
 namespace HapticResearch.Levels
 {
     // Pannello a schermo per l'OPERATORE VEDENTE: bottoni cliccabili col mouse per
@@ -9,8 +10,8 @@ namespace HapticResearch.Levels
     // separato dai bottoni in-world accessibili usati dal giocatore non vedente.
     public class OperatorControls : MonoBehaviour
     {
-        [Tooltip("Se null, cerca un ShapeRecognitionManager in scena all'avvio.")]
-        [SerializeField] private ShapeRecognitionManager manager;
+        [Tooltip("Se null, cerca il LevelController della scena all'avvio.")]
+        [SerializeField] private LevelController manager;
 
         [Header("Aspetto pannello")]
         [SerializeField] private bool showPanel = true;
@@ -33,9 +34,9 @@ namespace HapticResearch.Levels
 
         void Awake()
         {
-            if (manager == null) manager = FindFirstObjectByType<ShapeRecognitionManager>();
+            if (manager == null) manager = LevelController.Find();
             if (manager == null)
-                Debug.LogWarning("[OperatorControls] Nessun ShapeRecognitionManager in scena: aggiungilo e (opzionale) assegnalo nel campo Manager.");
+                Debug.LogWarning("[OperatorControls] Nessun LevelController in scena: aggiungilo e (opzionale) assegnalo nel campo Manager.");
         }
 
         void Start()
@@ -59,18 +60,19 @@ namespace HapticResearch.Levels
 
         void OnGUI()
         {
-            if (!showPanel) return;
+            // Pannello storico: con l'HUD operatore (sidebar) attivo non serve piu'.
+            if (!showPanel || OperatorHud.Active) return;
             EnsureStyles();
 
             Matrix4x4 prevMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.TRS(new Vector3(panelPos.x, panelPos.y, 0f), Quaternion.identity, Vector3.one * scale);
 
             GUILayout.BeginVertical(panelStyle, GUILayout.Width(260f));
-            GUILayout.Label("  UNIBS · Operatore - Level 1", titleStyle);
+            GUILayout.Label($"  UNIBS · Operatore - Livello {(manager != null ? manager.LevelNumber : 1)}", titleStyle);
 
             if (manager == null)
             {
-                GUILayout.Label("Manca ShapeRecognitionManager\nin scena: aggiungilo.", labelStyle);
+                GUILayout.Label("Manca il LevelController\nin scena: aggiungilo.", labelStyle);
             }
             else
             {
@@ -93,12 +95,7 @@ namespace HapticResearch.Levels
             GUI.matrix = prevMatrix;
         }
 
-        private string StatusLine()
-        {
-            if (manager.IsComplete) return "Stato: completato";
-            if (manager.IsRunning) return $"Round {manager.CurrentRound}/{manager.TotalRounds} - trova: {manager.CurrentTargetId}";
-            return "Stato: in attesa di avvio";
-        }
+        private string StatusLine() => "Stato: " + manager.StatusLine;
 
         private void EnsureStyles()
         {
