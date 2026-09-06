@@ -195,9 +195,9 @@ Apprendimento braille a 3 livelli:
   `generate_voice.py` (ElevenLabs). Chiavi Level 2: `level2_*`, `menu_back`
 - Suoni sintetici del labirinto in `Assets/Audio/Level2/` (generati con ffmpeg:
   colpetto muro, beep del faro, campanella checkpoint)
-- `VoiceSubtitles` (`Assets/Scripts/UI/`): sottotitoli per l'operatore: riga SENTO
-  (frase riconosciuta dal microfono, confidenza, esito) e riga DICO (testo della battuta
-  in corso). Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
+- `VoiceSubtitles` (`Assets/Scripts/UI/`): sottotitoli per l'operatore: riga GIOCATORE
+  (frase riconosciuta dal microfono, confidenza, esito) e riga NARRATORE (testo della
+  battuta in corso). Le due etichette si cambiano dall'Inspector. Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
   (`Placement`): in basso al centro nei livelli, in alto a sinistra nel menu (lo imposta
   `MainMenuSceneController`, in basso ci sono i crediti). I controller vocali segnalano
   ogni frase con `VoiceSubtitles.ReportHeard(...)` DOPO che l'azione ha deciso
@@ -269,7 +269,7 @@ da container, niente collider/rigidbody sul parent.
 | Right click | Distruggi oggetto in mano |
 | S / D | Ruota oggetto in mano |
 | F1 | Pannello diagnostico presa (guanti, bridge, grabPoint) |
-| F2 | Mostra / nasconde sottotitoli voce (SENTO / DICO) |
+| F2 | Mostra / nasconde sottotitoli voce (giocatore / narratore) |
 | F3 | Mostra / nasconde HUD operatore |
 | Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
 | N | Livello successivo (Level 1) o torna al menu (Level 2), solo a livello completato |

@@ -77,7 +77,7 @@ namespace HapticResearch.Menu
         [SerializeField] private KeyCode muteKey = KeyCode.M;
 
         [Header("Sottotitoli operatore")]
-        [Tooltip("Dove mettere i sottotitoli SENTO/DICO in questa scena: in basso ci sono i crediti, quindi di default in alto a sinistra.")]
+        [Tooltip("Dove mettere i sottotitoli (giocatore/narratore) in questa scena: in basso ci sono i crediti, quindi di default in alto a sinistra.")]
         [SerializeField] private VoiceSubtitles.Placement subtitlesPlacement = VoiceSubtitles.Placement.TopLeft;
 
         // --- runtime ---

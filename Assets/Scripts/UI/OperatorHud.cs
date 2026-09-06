@@ -15,7 +15,7 @@ namespace HapticResearch.UI
     //     (middleware WEART, TouchDIVER, calibrazione, Vive Tracker), bottoni Avvia/Ripeti
     //     (+ "livello successivo" a fine livello), footer con i tasti;
     //   - pill in alto a destra: mani demo ON/OFF (cliccabile), id partecipante, timer;
-    //   - la barra SENTO/DICO in basso la disegna VoiceSubtitles allineata a questa sidebar.
+    //   - la barra giocatore/narratore in basso la disegna VoiceSubtitles allineata a questa sidebar.
     // La vista 3D viene spostata a destra della sidebar (viewport delle camere su Display 1)
     // compensando il campo visivo, cosi' l'inquadratura orizzontale resta quella originale
     // e il tavolo resta tutto visibile.
@@ -44,6 +44,19 @@ namespace HapticResearch.UI
         [SerializeField] private float sidebarMaxWidth = 470f;
         [SerializeField] private float padding = 28f;
 
+        [Tooltip("Ingrandisce o rimpicciolisce TUTTO l'HUD: testi, bottoni, righe, margini. Si puo' cambiare anche mentre il gioco gira.")]
+        [SerializeField, Range(0.5f, 2.5f)] private float uiScale = 1f;
+
+        [Header("Marchio")]
+        [Tooltip("Logo mostrato nell'intestazione. Se vuoto lo prende da UnibsBranding in scena (Assets/Textures/UnibsLogo).")]
+        [SerializeField] private Texture2D logo;
+
+        [Tooltip("Ingrandisce solo il riquadro del logo.")]
+        [SerializeField, Range(0.5f, 2.5f)] private float logoScale = 1f;
+
+        [Tooltip("Margine ai lati della fascia del logo, in pixel: piu' basso = logo piu' largo.")]
+        [SerializeField] private float logoInset = 6f;
+
         [Tooltip("Restringe il viewport delle camere a destra della sidebar.")]
         [SerializeField] private bool shrinkCameraViewport = true;
 
@@ -54,10 +67,21 @@ namespace HapticResearch.UI
         [SerializeField] private KeyCode toggleKey = KeyCode.F3;
 
         [Header("Testi")]
-        [SerializeField] private string orgName = "UniBS";
+        [Tooltip("Nome dell'ente sotto il logo: va a capo da solo se lungo.")]
+        [SerializeField] private string orgName = "Università degli Studi di Brescia";
+
+        [Tooltip("Riga sotto il nome. Lascia vuoto per non mostrarla.")]
         [SerializeField] private string roleLabel = "OPERATORE";
-        [Tooltip("Etichetta del tasto che cambia mano (HandInputManager), mostrata nel footer.")]
+        [Tooltip("Etichetta del tasto che cambia mano (HandInputManager), usata nel footer al posto di {switch}.")]
         [SerializeField] private string handSwitchKeyLabel = "TAB";
+
+        [Tooltip("Righe in fondo alla sidebar. {switch} viene sostituito col tasto qui sopra.")]
+        [TextArea(2, 4)]
+        [SerializeField] private string footerText = "F1 diagnostica | F2 sottotitoli | F3 HUD\n{switch} switch mano | M muta voce | R ripeti";
+
+        [Tooltip("Riga in piu' quando le mani demo sono accese. Vuoto per non mostrarla.")]
+        [TextArea(1, 3)]
+        [SerializeField] private string footerDemoText = "Demo: mouse muove | click chiude | G afferra | Q/E su/giu'";
 
         [Header("Vive Tracker")]
         [Tooltip("Un tracker conta come attivo se il suo target si e' mosso di piu' di questa soglia (m) negli ultimi secondi.")]
@@ -69,7 +93,6 @@ namespace HapticResearch.UI
         private LevelFlowController flow;
         private HandDemoModeController demo;
         private ViveTrackerManager trackers;
-        private Texture2D logo;
         private float pillBottom;
 
         // Stato hardware. Gli handler del SDK possono girare fuori dal main thread: qui si
@@ -91,6 +114,12 @@ namespace HapticResearch.UI
         private readonly Dictionary<Camera, CameraState> touchedCameras = new Dictionary<Camera, CameraState>();
 
         private float SidebarWidth => Mathf.Clamp(Screen.width * sidebarFraction, sidebarMinWidth, Mathf.Min(sidebarMaxWidth, Screen.width * 0.5f));
+
+        // Margine interno scalato con l'HUD.
+        private float Pad => padding * uiScale;
+
+        // Ricostruisce gli stili quando si ritocca la scala o i testi dall'Inspector, anche in Play.
+        void OnValidate() { normal = null; compact = null; }
 
         // --- Auto-install -------------------------------------------------------------
 
@@ -140,12 +169,16 @@ namespace HapticResearch.UI
             flow = FindFirstObjectByType<LevelFlowController>(FindObjectsInactive.Include);
             demo = FindFirstObjectByType<HandDemoModeController>(FindObjectsInactive.Include);
             trackers = FindFirstObjectByType<ViveTrackerManager>(FindObjectsInactive.Include);
-            logo = Resources.Load<Texture2D>("UnibsLogo");
+            // Logo: quello assegnato da Inspector, altrimenti Resources, altrimenti quello
+            // gia' usato dal branding in scena (Assets/Textures/UnibsLogo).
+            if (logo == null) logo = Resources.Load<Texture2D>("UnibsLogo");
             if (logo == null)
             {
                 var branding = FindFirstObjectByType<HapticResearch.Branding.UnibsBranding>(FindObjectsInactive.Include);
                 if (branding != null) logo = branding.Logo;
             }
+            if (logo == null)
+                Debug.LogWarning("[OperatorHud] Nessun logo: assegnalo nel campo Logo dell'OperatorHud (Assets/Textures/UnibsLogo).");
         }
 
         void OnEnable()
@@ -330,8 +363,8 @@ namespace HapticResearch.UI
 
             float w = SidebarWidth;
             float h = Screen.height;
-            float x = padding;
-            float cw = w - 2f * padding;
+            float x = Pad;
+            float cw = w - 2f * Pad;
 
             // Scelta misure: se con quelle normali il blocco alto scende sopra quello basso, compatte.
             bool canGoNext = flow != null && flow.CanGoNext;
@@ -346,16 +379,17 @@ namespace HapticResearch.UI
             // Blocco basso (dal fondo): footer, bottoni.
             var footerContent = new GUIContent(footer);
             float fh = set.footer.CalcHeight(footerContent, cw);
-            float by = h - padding - fh;
+            float by = h - Pad - fh;
             GUI.Label(new Rect(x, by, cw, fh), footerContent, set.footer);
             by -= set.sectionGap;
 
+            float btnGap = S(10f);
             if (canGoNext)
             {
                 by -= set.secondaryH;
                 if (GUI.Button(new Rect(x, by, cw, set.secondaryH), $"{flow.NextButtonLabel}  ({flow.NextLevelKey})", set.primary))
                     flow.GoToNextLevel();
-                by -= 10f;
+                by -= btnGap;
             }
 
             by -= set.secondaryH;
@@ -363,7 +397,7 @@ namespace HapticResearch.UI
             if (GUI.Button(new Rect(x, by, cw, set.secondaryH), "Ripeti annuncio", set.secondary))
                 level.RepeatAnnouncement();
             GUI.enabled = true;
-            by -= 10f;
+            by -= btnGap;
 
             by -= set.primaryH;
             string startLabel = level.IsRunning ? "Riavvia livello" : level.IsComplete ? "Nuovo partecipante" : "Avvia livello";
@@ -372,37 +406,56 @@ namespace HapticResearch.UI
             float bottomTop = by - set.sectionGap;
 
             // Blocco alto: intestazione, livello, stato, hardware.
-            float y = padding;
-            var logoRect = new Rect(x, y, set.logoSize, set.logoSize);
-            GUI.DrawTexture(logoRect, panelTex);
-            DrawFrame(logoRect);
-            if (logo != null) GUI.DrawTexture(new Rect(x + 6f, y + 6f, set.logoSize - 12f, set.logoSize - 12f), logo, ScaleMode.ScaleToFit, true);
-            else GUI.Label(logoRect, "UB", set.logoText);
-            GUI.Label(new Rect(x + set.logoSize + 16f, y + set.logoSize * 0.14f, cw - set.logoSize - 16f, 26f), orgName, set.org);
-            GUI.Label(new Rect(x + set.logoSize + 16f, y + set.logoSize * 0.58f, cw - set.logoSize - 16f, 18f), roleLabel, set.role);
-            y += set.logoSize + set.sectionGap * 0.8f;
+            float y = Pad;
+            float inset = Mathf.Clamp(logoInset * uiScale, 0f, cw * 0.4f);
+            if (logo != null)
+            {
+                // Fascia a tutta larghezza: ScaleToFit tiene le proporzioni e centra, quindi
+                // il logo e' grande quanto la sidebar lo consente senza deformarsi.
+                GUI.DrawTexture(new Rect(x + inset, y, cw - 2f * inset, set.logoSize), logo, ScaleMode.ScaleToFit, true);
+            }
+            else
+            {
+                var logoRect = new Rect(x, y, set.logoSize, set.logoSize);
+                GUI.DrawTexture(logoRect, panelTex);
+                DrawFrame(logoRect);
+                GUI.Label(logoRect, "UniBs", set.logoText);
+            }
+            y += set.logoSize + S(14f);
+
+            var orgContent = new GUIContent(orgName);
+            float orgH = set.org.CalcHeight(orgContent, cw);
+            GUI.Label(new Rect(x, y, cw, orgH), orgContent, set.org);
+            y += orgH;
+            if (!string.IsNullOrEmpty(roleLabel))
+            {
+                GUI.Label(new Rect(x, y + S(4f), cw, S(18f)), roleLabel, set.role);
+                y += S(4f) + S(18f);
+            }
+            y += set.sectionGap * 0.8f;
             GUI.DrawTexture(new Rect(0f, y, w, 1f), borderTex);
             y += set.sectionGap;
 
-            GUI.Label(new Rect(x, y, cw, 18f), $"LIVELLO {level.LevelNumber}", set.levelLabel);
-            y += 24f;
+            GUI.Label(new Rect(x, y, cw, S(18f)), $"LIVELLO {level.LevelNumber}", set.levelLabel);
+            y += S(24f);
             var titleContent = new GUIContent(level.LevelTitle);
             float th = set.title.CalcHeight(titleContent, cw);
             GUI.Label(new Rect(x, y, cw, th), titleContent, set.title);
             y += th + set.titleGap;
 
             var statusContent = new GUIContent(level.StatusLine);
-            float sh = Mathf.Max(set.statusMin, set.status.CalcHeight(statusContent, cw - 44f) + 20f);
+            float statusInset = S(44f), statusPad = S(20f), dot = S(10f);
+            float sh = Mathf.Max(set.statusMin, set.status.CalcHeight(statusContent, cw - statusInset) + statusPad);
             var statusRect = new Rect(x, y, cw, sh);
             GUI.DrawTexture(statusRect, panelTex);
-            GUI.DrawTexture(new Rect(x, y, 3f, sh), accentTex);
+            GUI.DrawTexture(new Rect(x, y, S(3f), sh), accentTex);
             var dotTex = level.IsRunning ? okTex : level.IsComplete ? blueTex : greyTex;
-            GUI.DrawTexture(new Rect(x + 18f, y + sh * 0.5f - 5f, 10f, 10f), dotTex);
-            GUI.Label(new Rect(x + 36f, y + 10f, cw - 44f, sh - 20f), statusContent, set.status);
+            GUI.DrawTexture(new Rect(x + S(18f), y + (sh - dot) * 0.5f, dot, dot), dotTex);
+            GUI.Label(new Rect(x + S(36f), y + statusPad * 0.5f, cw - statusInset, sh - statusPad), statusContent, set.status);
             y += sh + set.sectionGap;
 
-            GUI.Label(new Rect(x, y, cw, 18f), "HARDWARE", set.section);
-            y += 26f;
+            GUI.Label(new Rect(x, y, cw, S(18f)), "HARDWARE", set.section);
+            y += S(26f);
             bool middleware = MiddlewareConnected();
             HardwareRow(set, ref y, x, cw, "Middleware WEART", HudTheme.Rich(middleware ? HudTheme.Ok : HudTheme.Warn, middleware ? "CONNESSO" : "NON CONNESSO"));
             HardwareRow(set, ref y, x, cw, "TouchDIVER Pro", middleware
@@ -424,19 +477,21 @@ namespace HapticResearch.UI
         // Altezza totale richiesta da sidebar completa con queste misure (per scegliere le compatte).
         private float NeededHeight(StyleSet set, float cw, string footer, bool canGoNext)
         {
-            float top = padding + set.logoSize + set.sectionGap * 0.8f + 1f + set.sectionGap + 24f
+            float role = string.IsNullOrEmpty(roleLabel) ? 0f : S(22f);
+            float top = Pad + set.logoSize + S(14f) + set.org.CalcHeight(new GUIContent(orgName), cw) + role
+                + set.sectionGap * 0.8f + 1f + set.sectionGap + S(42f)
                 + set.title.CalcHeight(new GUIContent(level.LevelTitle), cw) + set.titleGap
-                + Mathf.Max(set.statusMin, set.status.CalcHeight(new GUIContent(level.StatusLine), cw - 44f) + 20f) + set.sectionGap
-                + 26f + 4f * set.rowHeight;
-            float bottom = padding + set.footer.CalcHeight(new GUIContent(footer), cw) + set.sectionGap
-                + (canGoNext ? set.secondaryH + 10f : 0f) + set.secondaryH + 10f + set.primaryH + set.sectionGap;
+                + Mathf.Max(set.statusMin, set.status.CalcHeight(new GUIContent(level.StatusLine), cw - S(44f)) + S(20f)) + set.sectionGap
+                + S(26f) + 4f * set.rowHeight;
+            float bottom = Pad + set.footer.CalcHeight(new GUIContent(footer), cw) + set.sectionGap
+                + (canGoNext ? set.secondaryH + S(10f) : 0f) + set.secondaryH + S(10f) + set.primaryH + set.sectionGap;
             return top + bottom;
         }
 
         private string FooterText(bool demoOn)
         {
-            string text = $"F1 diagnostica | F2 sottotitoli | F3 HUD\n{handSwitchKeyLabel} switch mano | M muta voce | R ripeti";
-            if (demoOn) text += "\nDemo: mouse muove | click chiude | G afferra | Q/E su/giu'";
+            string text = (footerText ?? string.Empty).Replace("{switch}", handSwitchKeyLabel);
+            if (demoOn && !string.IsNullOrEmpty(footerDemoText)) text += "\n" + footerDemoText;
             return text;
         }
 
@@ -445,7 +500,7 @@ namespace HapticResearch.UI
             float rh = set.rowHeight;
             var value = new GUIContent(richValue);
             float vw = set.rowValue.CalcSize(value).x;
-            GUI.Label(new Rect(x, y, Mathf.Max(40f, cw - vw - 8f), rh), label, set.rowLabel);
+            GUI.Label(new Rect(x, y, Mathf.Max(S(40f), cw - vw - S(8f)), rh), label, set.rowLabel);
             GUI.Label(new Rect(x, y, cw, rh), value, set.rowValue);
             GUI.DrawTexture(new Rect(x, y + rh - 1f, cw, 1f), borderTex);
             y += rh;
@@ -471,12 +526,13 @@ namespace HapticResearch.UI
             var content = new GUIContent($"{dot}  {demoLabel}  |  {pid}  |  {timer}");
 
             var size = pillStyle.CalcSize(content);
-            var rect = new Rect(Screen.width - size.x - 40f - 24f, 24f, size.x + 40f, size.y + 20f);
+            float px = S(20f), py = S(10f), margin = S(24f);
+            var rect = new Rect(Screen.width - size.x - 2f * px - margin, margin, size.x + 2f * px, size.y + 2f * py);
             pillBottom = rect.yMax;
             GUI.DrawTexture(rect, pillTex);
             GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 1f), borderTex);
             GUI.DrawTexture(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), borderTex);
-            GUI.Label(new Rect(rect.x + 20f, rect.y + 10f, size.x, size.y), content, pillStyle);
+            GUI.Label(new Rect(rect.x + px, rect.y + py, size.x, size.y), content, pillStyle);
 
             // Click sulla pill = toggle demo (stessa cosa del vecchio pannello).
             if (demoAvailable && GUI.Button(rect, GUIContent.none, GUIStyle.none))
@@ -499,38 +555,46 @@ namespace HapticResearch.UI
             outlineTex = HudTheme.Solid(HudTheme.Panel);
             outlineHoverTex = HudTheme.Solid(HudTheme.Border);
 
-            pillStyle = HudTheme.Label(HudTheme.Mono(16), 16, HudTheme.Text, FontStyle.Bold, TextAnchor.MiddleLeft);
+            int pillFont = S(16);
+            pillStyle = HudTheme.Label(HudTheme.Mono(pillFont), pillFont, HudTheme.Text, FontStyle.Bold, TextAnchor.MiddleLeft);
             normal = BuildStyles(false);
             compact = BuildStyles(true);
         }
+
+        // Tutte le misure passano da qui: uiScale le moltiplica, cosi' l'HUD si ingrandisce
+        // o rimpicciolisce in blocco dall'Inspector.
+        private float S(float v) => v * uiScale;
+        private int S(int v) => Mathf.Max(8, Mathf.RoundToInt(v * uiScale));
 
         private StyleSet BuildStyles(bool small)
         {
             var s = new StyleSet
             {
-                logoSize = small ? 48f : 64f,
-                titleGap = small ? 12f : 18f,
-                statusMin = small ? 42f : 52f,
-                rowHeight = small ? 34f : 44f,
-                primaryH = small ? 50f : 64f,
-                secondaryH = small ? 42f : 56f,
-                sectionGap = small ? 16f : 28f,
+                logoSize = S(small ? 76f : 108f) * logoScale, // altezza della fascia del marchio
+                titleGap = S(small ? 12f : 18f),
+                statusMin = S(small ? 42f : 52f),
+                rowHeight = S(small ? 34f : 44f),
+                primaryH = S(small ? 50f : 64f),
+                secondaryH = S(small ? 42f : 56f),
+                sectionGap = S(small ? 16f : 28f),
             };
-            int title = small ? 28 : 38, status = small ? 16 : 19, rowL = small ? 15 : 18, rowV = small ? 13 : 15, foot = small ? 11 : 12;
-            s.org = HudTheme.Label(HudTheme.Sans(small ? 19 : 22), small ? 19 : 22, HudTheme.Text, FontStyle.Bold);
-            s.role = HudTheme.Label(HudTheme.Mono(12), 12, HudTheme.AccentLight);
-            s.logoText = HudTheme.Label(HudTheme.Serif(small ? 20 : 26), small ? 20 : 26, HudTheme.Text, FontStyle.Normal, TextAnchor.MiddleCenter);
-            s.levelLabel = HudTheme.Label(HudTheme.Mono(13), 13, HudTheme.AccentLight);
+            int title = S(small ? 28 : 38), status = S(small ? 16 : 19), rowL = S(small ? 15 : 18), rowV = S(small ? 13 : 15), foot = S(small ? 11 : 12);
+            int org = S(small ? 15 : 18), logoTxt = S(small ? 20 : 26), mono12 = S(12), mono13 = S(13);
+            s.org = HudTheme.Label(HudTheme.Sans(org), org, HudTheme.Text, FontStyle.Bold, TextAnchor.UpperLeft, true);
+            s.role = HudTheme.Label(HudTheme.Mono(mono12), mono12, HudTheme.AccentLight);
+            s.logoText = HudTheme.Label(HudTheme.Serif(logoTxt), logoTxt, HudTheme.Text, FontStyle.Normal, TextAnchor.MiddleCenter);
+            s.levelLabel = HudTheme.Label(HudTheme.Mono(mono13), mono13, HudTheme.AccentLight);
             s.title = HudTheme.Label(HudTheme.Serif(title), title, HudTheme.Text, FontStyle.Normal, TextAnchor.UpperLeft, true);
             s.status = HudTheme.Label(HudTheme.Sans(status), status, HudTheme.Text, FontStyle.Normal, TextAnchor.MiddleLeft, true);
-            s.section = HudTheme.Label(HudTheme.Mono(12), 12, HudTheme.Muted);
+            s.section = HudTheme.Label(HudTheme.Mono(mono12), mono12, HudTheme.Muted);
             s.rowLabel = HudTheme.Label(HudTheme.Sans(rowL), rowL, HudTheme.Text, FontStyle.Normal, TextAnchor.MiddleLeft);
             s.rowValue = HudTheme.Label(HudTheme.Mono(rowV), rowV, HudTheme.Text, FontStyle.Bold, TextAnchor.MiddleRight);
             s.footer = HudTheme.Label(HudTheme.Mono(foot), foot, HudTheme.Muted, FontStyle.Normal, TextAnchor.UpperLeft, true);
 
+            int btn = S(small ? 18 : 22);
             s.primary = new GUIStyle(GUI.skin.button)
             {
-                fontSize = small ? 18 : 22,
+                fontSize = btn,
                 fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.MiddleCenter,
                 border = new RectOffset(0, 0, 0, 0),
@@ -539,19 +603,20 @@ namespace HapticResearch.UI
                 active = { background = accentHoverTex, textColor = HudTheme.Text },
                 focused = { background = accentTex, textColor = HudTheme.Text }
             };
-            var sans = HudTheme.Sans(small ? 18 : 22);
+            var sans = HudTheme.Sans(btn);
             if (sans != null) s.primary.font = sans;
 
+            int btn2 = S(small ? 16 : 19);
             s.secondary = new GUIStyle(s.primary)
             {
-                fontSize = small ? 16 : 19,
+                fontSize = btn2,
                 fontStyle = FontStyle.Normal,
                 normal = { background = outlineTex, textColor = HudTheme.Text },
                 hover = { background = outlineHoverTex, textColor = HudTheme.Text },
                 active = { background = outlineHoverTex, textColor = HudTheme.Text },
                 focused = { background = outlineTex, textColor = HudTheme.Text }
             };
-            var sans2 = HudTheme.Sans(small ? 16 : 19);
+            var sans2 = HudTheme.Sans(btn2);
             if (sans2 != null) s.secondary.font = sans2;
             return s;
         }

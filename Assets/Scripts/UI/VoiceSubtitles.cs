@@ -8,9 +8,9 @@ using UnityEngine.Windows.Speech;
 namespace HapticResearch.UI
 {
     // Sottotitoli a schermo per l'OPERATORE VEDENTE: due righe fisse.
-    //   SENTO -> l'ultima frase riconosciuta dal microfono, con confidenza ed esito
+    //   GIOCATORE -> l'ultima frase riconosciuta dal microfono, con confidenza ed esito
     //            (eseguita, oppure ignorata e perche') e lo stato del riconoscimento
-    //   DICO  -> il testo della battuta vocale che il gioco sta pronunciando
+    //   NARRATORE -> il testo della battuta vocale che il gioco sta pronunciando
     //
     // Serve a chi conduce la sessione: vede se il comando e' arrivato e cosa sta sentendo
     // il partecipante senza guardare la Console. Il partecipante non vedente non ne ha
@@ -61,10 +61,18 @@ namespace HapticResearch.UI
         [SerializeField] private float minWidth = 480f;
         [SerializeField] private float maxWidth = 1000f;
 
+        [Header("Chi parla (targhette)")]
+        [Tooltip("Etichetta della riga con quello che dice il partecipante (riconosciuto dal microfono).")]
+        [SerializeField] private string heardLabel = "GIOCATORE";
+
+        [Tooltip("Etichetta della riga con quello che dice il gioco a voce.")]
+        [SerializeField] private string saidLabel = "NARRATORE";
+
         [Header("Barra (con HUD operatore)")]
         [SerializeField] private float barMargin = 20f;
         [SerializeField] private float barPadding = 14f;
         [SerializeField] private int barFontSize = 21;
+        [Tooltip("Larghezza minima delle targhette: con etichette piu' lunghe si allargano da sole.")]
         [SerializeField] private float badgeWidth = 82f;
         [SerializeField] private float badgeHeight = 30f;
 
@@ -99,6 +107,7 @@ namespace HapticResearch.UI
         private Texture2D bg;
 
         // Stili della barra (HUD).
+        private float badgeW; // larghezza effettiva delle targhette, calcolata dal testo
         private GUIStyle barStyle, badgeHeardStyle, badgeSaidStyle;
         private Texture2D barBg, barAccent, barAccentLight, barDim, badgeHeardTex, badgeSaidTex;
 
@@ -170,7 +179,7 @@ namespace HapticResearch.UI
         }
 
         // Battuta pronunciata senza passare dal NarrationManager (es. clip di riserva da
-        // Inspector quando manca la traccia pre-generata): resta in riga DICO per 'seconds'.
+        // Inspector quando manca la traccia pre-generata): resta nella riga del narratore per 'seconds'.
         public static void ReportSaid(string text, float seconds)
         {
             if (string.IsNullOrEmpty(text)) return;
@@ -220,6 +229,9 @@ namespace HapticResearch.UI
         private static string lastSpeechError;
         private static void OnSpeechError(SpeechError error) => lastSpeechError = error.ToString();
 #endif
+
+        // Ricostruisce gli stili quando si ritoccano dimensioni o margini dall'Inspector.
+        void OnValidate() { styleReady = false; }
 
         void Update()
         {
@@ -298,7 +310,12 @@ namespace HapticResearch.UI
             float width = Screen.width - left - barMargin;
             const float accent = 4f;
             const float iconWidth = 34f;
-            float textLeft = accent + barPadding + badgeWidth + barPadding;
+            // Le targhette si adattano all'etichetta piu' lunga: cambiarle dall'Inspector
+            // non taglia mai le parole.
+            badgeW = Mathf.Max(badgeWidth,
+                Mathf.Max(badgeHeardStyle.CalcSize(new GUIContent(heardLabel)).x,
+                          badgeSaidStyle.CalcSize(new GUIContent(saidLabel)).x) + 18f);
+            float textLeft = accent + barPadding + badgeW + barPadding;
             float textWidth = width - textLeft - barPadding - iconWidth - barPadding;
 
             var heard = new GUIContent(HeardText());
@@ -313,9 +330,9 @@ namespace HapticResearch.UI
             GUI.DrawTexture(new Rect(rect.x, rect.y, accent, rect.height), barAccent);
 
             float y = rect.y + barPadding;
-            DrawBarRow(rect, y, hHeard, textLeft, textWidth, "SENTO", badgeHeardTex, badgeHeardStyle, heard);
+            DrawBarRow(rect, y, hHeard, textLeft, textWidth, heardLabel, badgeHeardTex, badgeHeardStyle, heard);
             y += hHeard + rowGap;
-            DrawBarRow(rect, y, hSaid, textLeft, textWidth, "DICO", badgeSaidTex, badgeSaidStyle, said);
+            DrawBarRow(rect, y, hSaid, textLeft, textWidth, saidLabel, badgeSaidTex, badgeSaidStyle, said);
 
             DrawLevelIcon(new Rect(rect.xMax - barPadding - iconWidth, rect.y + barPadding, iconWidth, hHeard), speakingNow);
         }
@@ -324,7 +341,7 @@ namespace HapticResearch.UI
             string badge, Texture2D badgeTex, GUIStyle badgeStyle, GUIContent text)
         {
             // Badge allineato alla prima riga di testo (in alto se il testo va a capo).
-            var badgeRect = new Rect(bar.x + 4f + barPadding, y + Mathf.Max(0f, (Mathf.Min(rowHeight, badgeHeight + 6f) - badgeHeight) * 0.5f), badgeWidth, badgeHeight);
+            var badgeRect = new Rect(bar.x + 4f + barPadding, y + Mathf.Max(0f, (Mathf.Min(rowHeight, badgeHeight + 6f) - badgeHeight) * 0.5f), badgeW, badgeHeight);
             GUI.DrawTexture(badgeRect, badgeTex);
             GUI.Label(badgeRect, badge, badgeStyle);
             GUI.Label(new Rect(bar.x + textLeft, y, textWidth, rowHeight), text, barStyle);
@@ -370,8 +387,8 @@ namespace HapticResearch.UI
 
         // --- Riquadro compatto (senza HUD: menu) --------------------------------------
 
-        private string HeardLine() => Tag("SENTO") + " " + HeardText();
-        private string SaidLine() => Tag("DICO") + " " + SaidText();
+        private string HeardLine() => Tag(heardLabel) + " " + HeardText();
+        private string SaidLine() => Tag(saidLabel) + " " + SaidText();
 
         private static string Tag(string name) => $"<color={TagColor}>{name}</color>";
 
@@ -420,7 +437,7 @@ namespace HapticResearch.UI
                 padding = new RectOffset(14, 14, 8, 8)
             };
 
-            // Barra stile mockup: fondo scuro, bordo sinistro blu, badge SENTO/DICO.
+            // Barra stile mockup: fondo scuro, bordo sinistro blu, targhette giocatore/narratore.
             barBg = HudTheme.Solid(new Color(HudTheme.Bg.r, HudTheme.Bg.g, HudTheme.Bg.b, 0.92f));
             barAccent = HudTheme.Solid(HudTheme.Accent);
             barAccentLight = HudTheme.Solid(HudTheme.AccentLight);

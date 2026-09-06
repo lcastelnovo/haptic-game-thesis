@@ -234,7 +234,7 @@ namespace HapticResearch.Voice
 
         void OnGUI()
         {
-            // Con l'HUD operatore attivo lo stato voce sta nella barra SENTO/DICO.
+            // Con l'HUD operatore attivo lo stato voce sta nella barra giocatore/narratore.
             if (!showStatus || OperatorHud.Active) return;
             EnsureStyle();
 
