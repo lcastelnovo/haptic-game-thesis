@@ -9,8 +9,8 @@ VR nativo con OpenXR + SteamVR e tracking opzionale via Vive Tracker.
 ## Stack
 
 - Unity **6000.3.15f1**
-- URP 17.3.0 — renderer separati PC/Mobile in `Assets/Settings/`
-- New Input System 1.19.0 — action map in `Assets/InputSystem_Actions.inputactions`
+- URP 17.3.0: renderer separati PC/Mobile in `Assets/Settings/`
+- New Input System 1.19.0: action map in `Assets/InputSystem_Actions.inputactions`
 - OpenXR 1.16.1 + SteamVR/OpenVR (pacchetto locale in `Assets/SteamVR/OpenVRUnityXRPackage/`)
 - Vive Tracker 3.0 (opzionale, per oggetti reali)
 - WEART Unity SDK **v2.3.0** in `Packages/WEART-UNITY-SDK/` (referenziato come pacchetto
@@ -49,7 +49,7 @@ Una volta sola per macchina.
    - `"steamvr".activateMultipleDrivers` → `true`
 3. Riavviare SteamVR.
 
-XR Plug-in Management nel progetto è già configurato — non toccare i loader senza
+XR Plug-in Management nel progetto è già configurato, non toccare i loader senza
 coordinarsi.
 
 **Hardware:**
@@ -70,7 +70,7 @@ coordinarsi.
 3. **Feedback audio sempre presente.** Ogni evento di stato (grab, errore, completamento
    task, cambio zona) ha voice-over o suono dedicato.
 4. **Calibrazione per partecipante.** Intensità forza e range termico parametrizzabili
-   via ScriptableObject o config runtime — niente valori hard-coded nei MonoBehaviour.
+   via ScriptableObject o config runtime, niente valori hard-coded nei MonoBehaviour.
 5. **Tutto sul piano del tavolo.** Gli oggetti sono **tile flat** o bump bassi a
    y≈0.86 (table top y=0.85). Niente oggetti alti, niente esplorazione verticale,
    niente interazioni "in aria". La mano scorre in XZ, la differenziazione tattile
@@ -80,21 +80,21 @@ coordinarsi.
 
 ### Interface-driven
 Le interazioni core sono astratte in `Assets/Scripts/Interface/`:
-- `IGrabbable` — grab/release oggetti fisici
-- `ITouchable` — touch → spawn copie di prefab
-- `IPressable` — azioni bottone
-- `IScenari` — navigazione scenari (Next/Back/Reset)
-- `IGridOrientable` — rotation snapping su griglia
+- `IGrabbable`: grab/release oggetti fisici
+- `ITouchable`: touch → spawn copie di prefab
+- `IPressable`: azioni bottone
+- `IScenari`: navigazione scenari (Next/Back/Reset)
+- `IGridOrientable`: rotation snapping su griglia
 
 ### Hand system (`Assets/Scripts/Hands/`)
 Simulazione bimanuale con articolazione per-dito:
-- `HandInputManager` — switch mano (Space), cursor lock, fullscreen
-- `HandPhysicsController` — movimento Rigidbody (mouse + tastiera), confinato al tavolo
-- `HandCollisionController` — tracking parti mano ↔ oggetti, audio feedback
-- `HandColliderPart` — collisione per segmento di dito (`touchDistance` = 0.03m)
-- `HandCloseController` — selezione dita (0-5) e chiusura via scroll
-- `HandGrabController` — left grab/press, right destroy, S/D ruota in mano
-- `FingerController` / `ThumbController` — interpolazione giunti tra pose open/closed
+- `HandInputManager`: switch mano (Space), cursor lock, fullscreen
+- `HandPhysicsController`: movimento Rigidbody (mouse + tastiera), confinato al tavolo
+- `HandCollisionController`: tracking parti mano ↔ oggetti, audio feedback
+- `HandColliderPart`: collisione per segmento di dito (`touchDistance` = 0.03m)
+- `HandCloseController`: selezione dita (0-5) e chiusura via scroll
+- `HandGrabController`: left grab/press, right destroy, S/D ruota in mano
+- `FingerController` / `ThumbController`: interpolazione giunti tra pose open/closed
 
 Lo `WeArtHandController` ufficiale del SDK è **intenzionalmente disabilitato**: il
 movimento mano lo fanno i nostri script. L'output aptico passa comunque per
@@ -103,22 +103,22 @@ TCP:13031 → middleware → device.
 
 ### Haptics (`Assets/Scripts/Haptics/`)
 Bridge custom sopra il SDK Weart per coesistenza con l'hand controller nostro:
-- `WeArtHapticBridge` — instradamento eventi aptici tra mani simulate e device
-- `HapticActuationEnabler` — abilita/disabilita attuazione per setup mono/bi-manuale
-- `HapticFingerSetup` — mappatura dita Unity → attuatori TouchDIVER
-- `WeArtTrackingSetup` — config tracking quando si usa SDK nativo
-- `Assets/Scripts/Debug/HapticTriggerMonitor` — diagnostica trigger aptici
+- `WeArtHapticBridge`: instradamento eventi aptici tra mani simulate e device
+- `HapticActuationEnabler`: abilita/disabilita attuazione per setup mono/bi-manuale
+- `HapticFingerSetup`: mappatura dita Unity → attuatori TouchDIVER
+- `WeArtTrackingSetup`: config tracking quando si usa SDK nativo
+- `Assets/Scripts/Debug/HapticTriggerMonitor`: diagnostica trigger aptici
 
 ### Vive Tracker (`Assets/Scripts/ViveTracker/`)
 Tracking esterno opzionale (tracker montato sul TouchDIVER per posizione mano reale):
-- `ViveTrackerManager` — bind dei tracker SteamVR ai target Unity. Va riempito con i
+- `ViveTrackerManager`: bind dei tracker SteamVR ai target Unity. Va riempito con i
   serial dei due tracker (`Left Tracker Serial` / `Right Tracker Serial`, formato
   `LHR-XXXXXXXX`) e i Transform target. Tracking Origin = `Tracking Universe Standing`
-- `ViveTrackerCalibrationManager` — allineamento spazio SteamVR ↔ coordinate Unity.
+- `ViveTrackerCalibrationManager`: allineamento spazio SteamVR ↔ coordinate Unity.
   Premere **Space** in gioco con il palmo della mano di calibrazione (lato definito
   da `CalibrationHandSide`) completamente appoggiato al tavolo, dita perpendicolari
   al bordo
-- `TrackerDebugger` — abilitare temporaneamente come component per loggare seriali e
+- `TrackerDebugger`: abilitare temporaneamente come component per loggare seriali e
   posizioni di tutti i tracker connessi, poi disabilitarlo (`Show Debug Objects` ON
   mostra anche i gameobject di calibrazione `RightCalibrationTarget` /
   `LeftCalibrationTarget` a runtime)
@@ -137,33 +137,33 @@ Tracking esterno opzionale (tracker montato sul TouchDIVER per posizione mano re
   sul supporto)
 
 **Opzioni in `ViveTrackerCalibrationManager`:**
-- `FreezeFingersClosure` — le dita ignorano i valori di chiusura/abduzione
-- `AllowOnlyLateralRotation` — mano ruota solo sull'asse Y
-- `FreezeHeight` — mano non si muove su/giù
-- `FreezeAllRotation` — mano forzata nella direzione di calibrazione (richiede
+- `FreezeFingersClosure`: le dita ignorano i valori di chiusura/abduzione
+- `AllowOnlyLateralRotation`: mano ruota solo sull'asse Y
+- `FreezeHeight`: mano non si muove su/giù
+- `FreezeAllRotation`: mano forzata nella direzione di calibrazione (richiede
   `FreezeHeight` + `AllowOnlyLateralRotation` attivi)
 
 ### Braille (`Assets/Scripts/Braille/`)
 Apprendimento braille a 3 livelli:
-- `BrailleDatabase` — encoding statico lettera/digit → pattern 6 punti
-- `BrailleGrid` — spawna righe×colonne di `BrailleCell` (cell size 0.2×0.3m)
-- `BrailleCell` / `BrailleDot` — rappresentazione 6 punti con stati raised/hidden
-- `BrailleGameManager` — L1: char singolo · L2: parola random · L3: due parole
-- `BrailleWordProvider` — carica parole da TextAsset
+- `BrailleDatabase`: encoding statico lettera/digit → pattern 6 punti
+- `BrailleGrid`: spawna righe×colonne di `BrailleCell` (cell size 0.2×0.3m)
+- `BrailleCell` / `BrailleDot`: rappresentazione 6 punti con stati raised/hidden
+- `BrailleGameManager` - L1 char singolo, L2 parola random, L3 due parole
+- `BrailleWordProvider`: carica parole da TextAsset
 
 ### Scenari (`Assets/Scripts/Scenarios/`)
-- `TableScenarioManager` — controller top-level (menu + 3 scenari gameplay)
-- `Scenario1SubManager` — placement oggetti su griglia
-- `Scenario2Manager` — lettura braille con resize griglia per livello (1×2 → 1×5 → 2×5)
+- `TableScenarioManager`: controller top-level (menu + 3 scenari gameplay)
+- `Scenario1SubManager`: placement oggetti su griglia
+- `Scenario2Manager`: lettura braille con resize griglia per livello (1×2 → 1×5 → 2×5)
 
 ### Livelli (`Assets/Scripts/Levels/`)
-- `LevelController` — base astratta di ogni livello (id, numero, titolo, stato,
+- `LevelController`: base astratta di ogni livello (id, numero, titolo, stato,
   `StatusLine`, `ElapsedSeconds`, `StartLevel`, `RepeatAnnouncement`). Chi ha bisogno
   "del livello della scena" usa `LevelController.Find()`: comandi vocali, HUD, menu
   in-level, flusso di fine livello e demo girano identici in tutti i livelli
-- `ShapeRecognitionManager` — Level 1: annuncia una forma, il partecipante la afferra e la
+- `ShapeRecognitionManager` - Level 1: annuncia una forma, il partecipante la afferra e la
   tiene 5 s per confermare; 4 forme in ordine casuale
-- `LabyrinthManager` — Level 2: prima trova l'ingresso (faro sonoro 2D che batte più
+- `LabyrinthManager` - Level 2: prima trova l'ingresso (faro sonoro 2D che batte più
   veloce avvicinandosi), poi segue il corridoio con l'indice fino all'uscita passando
   per le tappe (`MazeZone`: ingresso, checkpoint, uscita, in ordine, solo XZ). Tocco
   muro = colpetto + conteggio + log (`Collider.ClosestPoint` sulla punta proiettata a
@@ -171,23 +171,23 @@ Apprendimento braille a 3 livelli:
   demo OFF → mani `WEART/Hands` mosse dai tracker. Il labirinto di Luca (34 cubi +
   pad termici Caldino/Freddo) non ha un unico corridoio obbligato: le tappe sono
   provvisorie nel corridoio in basso e si spostano dall'Inspector
-- `LevelFlowController` — a livello completato: suggerimento parlato, "avanti"/N (o
+- `LevelFlowController` gestisce la fine del livello: suggerimento parlato, "avanti"/N (o
   "menu"/N nel labirinto) → scena successiva; Invio = nuovo partecipante
-- `MainMenuManager` — benvenuto parlato in-level a livello fermo, R lo ripete
-- `OperatorControls` — pannello storico, si spegne da solo quando c'è l'`OperatorHud`
+- `MainMenuManager`: benvenuto parlato in-level a livello fermo, R lo ripete
+- `OperatorControls`: pannello storico, si spegne da solo quando c'è l'`OperatorHud`
 
 ### Grid & Objects
-- `BuildGrid` (`Assets/Scripts/Grid/`) — snap grid 13×8, cell size 0.075m, niente overlap
-- `GrabbableObject` / `TouchableObject` (`Assets/Scripts/Objects/`) — physics grab con
+- `BuildGrid` (`Assets/Scripts/Grid/`): snap grid 13×8, cell size 0.075m, niente overlap
+- `GrabbableObject` / `TouchableObject` (`Assets/Scripts/Objects/`): physics grab con
   snapping opzionale, factory touch-to-spawn
-- `TriangleGridOrientation` — rotation snapping a 90° per prismi
+- `TriangleGridOrientation`: rotation snapping a 90° per prismi
 
 ### Audio & Camera
-- `ObjectAudioFeedback` (`Assets/Scripts/Audio/`) — audio spaziale 3D differenziato per
+- `ObjectAudioFeedback` (`Assets/Scripts/Audio/`): audio spaziale 3D differenziato per
   tipo (table / pressable / grabbable / touchable / default)
-- `NarrationManager` (`Assets/Scripts/Audio/`) — battute vocali pre-generate caricate per
+- `NarrationManager` (`Assets/Scripts/Audio/`): battute vocali pre-generate caricate per
   chiave da `Resources/Voice/<chiave>.mp3`; `CurrentKey` = battuta in riproduzione
-- `VoiceLines` (`Assets/Scripts/Audio/`) — testi delle battute da
+- `VoiceLines` (`Assets/Scripts/Audio/`): testi delle battute da
   `Assets/Resources/Voice/voice_lines.json`. È l'**unica fonte** dei testi: la leggono
   sia gli script `Tools/generate_voice*.py` (per generare gli mp3) sia i sottotitoli.
   Per aggiungere una battuta: nuova chiave nel JSON, poi
@@ -195,17 +195,17 @@ Apprendimento braille a 3 livelli:
   `generate_voice.py` (ElevenLabs). Chiavi Level 2: `level2_*`, `menu_back`
 - Suoni sintetici del labirinto in `Assets/Audio/Level2/` (generati con ffmpeg:
   colpetto muro, beep del faro, campanella checkpoint)
-- `VoiceSubtitles` (`Assets/Scripts/UI/`) — sottotitoli per l'operatore: riga SENTO
+- `VoiceSubtitles` (`Assets/Scripts/UI/`): sottotitoli per l'operatore: riga SENTO
   (frase riconosciuta dal microfono, confidenza, esito) e riga DICO (testo della battuta
   in corso). Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
   (`Placement`): in basso al centro nei livelli, in alto a sinistra nel menu (lo imposta
   `MainMenuSceneController`, in basso ci sono i crediti). I controller vocali segnalano
   ogni frase con `VoiceSubtitles.ReportHeard(...)` DOPO che l'azione ha deciso
-- `TopCameraFitTable` (`Assets/Scripts/Camera/`) — ortho top-down fittata al tavolo
+- `TopCameraFitTable` (`Assets/Scripts/Camera/`): ortho top-down fittata al tavolo
   (legacy desktop; in VR non viene usata)
 
 ### HUD operatore (`Assets/Scripts/UI/`)
-- `OperatorHud` — interfaccia unica dell'operatore vedente (dal mockup grafico), uguale in
+- `OperatorHud`: interfaccia unica dell'operatore vedente (dal mockup grafico), uguale in
   tutti i livelli, auto-installata nelle scene con un `LevelController` (non nel menu):
   sidebar a sinistra (logo, livello e titolo, stato, righe hardware in sola lettura dal
   SDK: middleware, TouchDIVER, calibrazione, Vive Tracker; bottoni Avvia/Ripeti/livello
@@ -213,13 +213,13 @@ Apprendimento braille a 3 livelli:
   partecipante, timer). Le camere su Display 1 vengono ristrette a destra della
   sidebar. **F3** nasconde l'HUD. I pannelli storici (OperatorControls, toggle demo,
   indicatore voce, watermark) si spengono da soli quando l'HUD è attivo
-- `HudTheme` — palette e font di sistema (Georgia/Consolas su Windows) condivisi
+- `HudTheme`: palette e font di sistema (Georgia/Consolas su Windows) condivisi
 - La vista 3D resta com'è nel codice: il mockup vale solo per sidebar, pill e barra
 
 ## Hardware Weart
 
-- TouchDIVER Pro: 6 punti di attuazione (Thumb, Index, Middle, Annular, Pinky, Palm) —
-  forza, vibrazione, temperatura
+- TouchDIVER Pro: 6 punti di attuazione (Thumb, Index, Middle, Annular, Pinky, Palm) con
+  forza, vibrazione e temperatura
 - Il feedback termico richiede **~2-3s** per raggiungere target → non triggerare cambi
   termici rapidi consecutivi, non avranno effetto e confondono il partecipante
 - Configurazioni: 1 o 2 TouchDIVER (dx, sx, o entrambe)
@@ -228,7 +228,7 @@ Apprendimento braille a 3 livelli:
 
 **`WeArtController` prefab in scena:**
 - `Device Generation` = `TD_Pro`
-- `Start Calibration Automatically` ON — calibrazione TouchDIVER all'avvio della scena
+- `Start Calibration Automatically` ON: calibrazione TouchDIVER all'avvio della scena
 - `Allow Gestures`, `Use External Grasp System`, `Start Raw Data Automatically` OFF
 
 ## Aggiungere oggetti touchable
@@ -237,8 +237,8 @@ Regole per un nuovo oggetto da rendere tattile (vedi `Cube`, `Cylinder`, `Prism`
 nella scena come riferimento):
 
 **Mesh Collider** (se non è una primitiva tipo Cube/Sphere)
-- `Convex` ON — necessario per il physics system
-- `Is Trigger` ON — l'oggetto si lascia attraversare (la sensazione la generano i pad
+- `Convex` ON: necessario per il physics system
+- `Is Trigger` ON: l'oggetto si lascia attraversare (la sensazione la generano i pad
   aptici, non c'è blocco fisico)
 
 **Rigidbody** (obbligatorio: il sistema haptic reagisce solo a oggetti con Rigidbody)
@@ -247,14 +247,14 @@ nella scena come riferimento):
 
 **`WeArtTouchableObject`**
 - Spuntare `Stiffness` / `Texture` / `Temperature` secondo la sensazione desiderata
-- `Disable Dynamic Force` ON — senza questo la forza viene applicata in modo sbagliato
+- `Disable Dynamic Force` ON: senza questo la forza viene applicata in modo sbagliato
   sulle dita
 - `Graspable` ON solo se l'oggetto deve essere afferrabile
 
 **Oggetti complessi (non convex)**
 Split in più mesh convex separate (es. una stella = 1 cubo + 4 prismi). Ogni parte ha
 il suo Rigidbody + WeArtTouchableObject. Il parent è un GameObject vuoto che fa solo
-da container — niente collider/rigidbody sul parent.
+da container, niente collider/rigidbody sul parent.
 
 ## Controlli desktop (fallback)
 
@@ -275,20 +275,20 @@ da container — niente collider/rigidbody sul parent.
 | N | Livello successivo (Level 1) o torna al menu (Level 2), solo a livello completato |
 | M | Muta / riattiva il microfono |
 
-In VR la mappatura passa al controller / tracking nativo — la sorgente attiva è gestita
+In VR la mappatura passa al controller / tracking nativo, la sorgente attiva è gestita
 da `HandInputManager`.
 
 ## Convenzioni codice
 
 - Commenti **in italiano** (convenzione storica, manteniamola anche sui nuovi script)
 - `SerializeField` privato invece di public field
-- Niente `GetComponent` / `Find` in `Update` — cachare in `Awake`
+- Niente `GetComponent` / `Find` in `Update`: cachare in `Awake`
 - Configurazione via Inspector (`[SerializeField]`), non costanti hard-coded
 - Physics nei `FixedUpdate` con Rigidbody
 - API Unity 6: `FindObjectsByType<T>(FindObjectsSortMode.None)`, non `FindObjectOfType`
 - Logging dati sperimentali via un `SessionLogger` centralizzato (da introdurre in
   `Assets/Scripts/Experiment/` quando arriviamo al raccolto dati), non `Debug.Log` sparsi
-- Namespace `HapticResearch.<Sottosistema>` sui nuovi script — i vecchi vanno
+- Namespace `HapticResearch.<Sottosistema>` sui nuovi script: i vecchi vanno
   retro-fittati a poco a poco, non in un colpo solo
 
 ## Logging dati sperimentali
@@ -296,7 +296,7 @@ da `HandInputManager`.
 - Formato: CSV in `<persistentDataPath>/SessionLogs/`
 - Campi minimi: timestamp ISO 8601, `participantId` (anonimo), level, condition,
   eventType, eventData (JSON)
-- **MAI** dati personali identificativi — solo ID anonimi assegnati prima della sessione
+- **MAI** dati personali identificativi: solo ID anonimi assegnati prima della sessione
 
 ## Workflow scene
 
@@ -315,10 +315,10 @@ prima.
 
 - **MAI** cambiare il path del pacchetto WEART in `Packages/manifest.json` senza
   coordinarsi: è specifico per macchina e la cartella SDK è in `.gitignore`
-- **MAI** modificare guid/fileID nei `.unity` / `.prefab` / `.asset` — generati da Unity
+- **MAI** modificare guid/fileID nei `.unity` / `.prefab` / `.asset`: generati da Unity
   e legati all'installazione locale; il collegamento Inspector lo fa la persona che apre
   la scena
-- **MAI** toccare file dentro `Packages/WEART-UNITY-SDK/` o `Assets/SteamVR/` — è codice
+- **MAI** toccare file dentro `Packages/WEART-UNITY-SDK/` o `Assets/SteamVR/`: è codice
   di terze parti, si aggiorna sostituendo il pacchetto
 - Non toccare `Library/`, `Temp/`, `Logs/`, `UserSettings/` (sono in `.gitignore`)
 - Non aggiungere dipendenze pesanti senza chiedere prima
@@ -333,5 +333,5 @@ prima.
 
 ## Team
 
-UniBS — Prof.ssa Anna Richelli (supervisione), Lorenzo Ghiro (ricercatore),
+UniBS, Prof.ssa Anna Richelli (supervisione), Lorenzo Ghiro (ricercatore),
 Luca Castelnovo (tesista), Simone Saleri (stagista).

@@ -132,9 +132,9 @@ namespace HapticResearch.Levels
             {
                 switch (state)
                 {
-                    case State.SeekingEntrance: return "cerca l'ingresso · faro attivo";
-                    case State.Following: return $"tappa {nextZoneIndex}/{Mathf.Max(1, zones.Count - 1)} · contatti muro: {wallTouches}";
-                    case State.LevelComplete: return $"completato · contatti muro: {wallTouches} ({F(wallContactSeconds, "0")} s)";
+                    case State.SeekingEntrance: return "cerca l'ingresso, faro attivo";
+                    case State.Following: return $"tappa {nextZoneIndex}/{Mathf.Max(1, zones.Count - 1)}, contatti muro: {wallTouches}";
+                    case State.LevelComplete: return $"completato, contatti muro: {wallTouches} ({F(wallContactSeconds, "0")} s)";
                     default: return "in attesa di avvio";
                 }
             }

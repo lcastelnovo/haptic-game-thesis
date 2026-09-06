@@ -131,7 +131,7 @@ namespace HapticResearch.Levels
             get
             {
                 if (IsComplete) return "completato";
-                if (IsRunning) return $"round {CurrentRound}/{TotalRounds} · trova: {CurrentTargetId}";
+                if (IsRunning) return $"round {CurrentRound}/{TotalRounds}, trova: {CurrentTargetId}";
                 return "in attesa di avvio";
             }
         }

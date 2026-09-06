@@ -380,7 +380,7 @@ namespace HapticResearch.Hands
             GUI.Box(rect, GUIContent.none, panelStyle);
             GUILayout.BeginArea(new Rect(rect.x, rect.y, rect.width, rect.height));
 
-            GUILayout.Label("  UNIBS · Modalità Demo", titleStyle);
+            GUILayout.Label("  UNIBS - Modalità Demo", titleStyle);
 
             bool newVal = GUILayout.Toggle(DemoActive,
                 DemoActive ? "  Mani Demo: ON" : "  Mani Demo: OFF", toggleStyle);

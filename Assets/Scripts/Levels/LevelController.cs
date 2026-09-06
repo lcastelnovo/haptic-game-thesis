@@ -21,7 +21,7 @@ namespace HapticResearch.Levels
         public abstract bool IsRunning { get; }
         public abstract bool IsComplete { get; }
 
-        // Riga di stato breve per l'HUD ("in attesa di avvio", "round 2/4 · trova: cubo"...).
+        // Riga di stato breve per l'HUD ("in attesa di avvio", "round 2/4, trova: cubo"...).
         public abstract string StatusLine { get; }
 
         // Secondi dal via (0 se il livello non e' mai partito; fermo a fine livello).

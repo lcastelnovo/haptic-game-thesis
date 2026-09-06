@@ -68,7 +68,7 @@ namespace HapticResearch.Levels
             GUI.matrix = Matrix4x4.TRS(new Vector3(panelPos.x, panelPos.y, 0f), Quaternion.identity, Vector3.one * scale);
 
             GUILayout.BeginVertical(panelStyle, GUILayout.Width(260f));
-            GUILayout.Label($"  UNIBS · Operatore - Livello {(manager != null ? manager.LevelNumber : 1)}", titleStyle);
+            GUILayout.Label($"  UNIBS Operatore - Livello {(manager != null ? manager.LevelNumber : 1)}", titleStyle);
 
             if (manager == null)
             {

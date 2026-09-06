@@ -365,7 +365,7 @@ namespace HapticResearch.UI
             float age = Time.unscaledTime - saidEndedAt;
             if (lastSaidText != null && age <= saidHoldSeconds)
                 return $"<color={HoldColor}>{lastSaidText}</color>";
-            return $"<color={DimColor}>—</color>";
+            return $"<color={DimColor}>nessuna battuta</color>";
         }
 
         // --- Riquadro compatto (senza HUD: menu) --------------------------------------

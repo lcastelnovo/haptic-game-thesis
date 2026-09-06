@@ -77,9 +77,9 @@ namespace HapticResearch.UI
         private WeArtController weart;
         private float nextControllerSearch;
         private WeArtClient hookedClient;
-        private string devicesText = "—";
+        private string devicesText = "n/d";
         private int devicesState;      // 0 nessuno/ignoto, 1 ok, 2 attenzione
-        private int calibLeftState;    // 0 —, 1 in corso, 2 ok, 3 fallita
+        private int calibLeftState;    // 0 assente, 1 in corso, 2 ok, 3 fallita
         private int calibRightState;
 
         private bool trackerInit;
@@ -207,7 +207,7 @@ namespace HapticResearch.UI
 
         private void OnDevicesReady(ConnectedDevices e)
         {
-            if (e == null) { devicesText = "—"; devicesState = 0; return; }
+            if (e == null) { devicesText = "n/d"; devicesState = 0; return; }
             // I guanti si leggono sempre dalla lista: il middleware puo' essere in IDLE o in
             // CALIBRATION (non RUNNING) con i device gia' collegati.
             bool right = false, left = false;
@@ -219,7 +219,7 @@ namespace HapticResearch.UI
                     else if (d.HandSide == HandSide.Left) left = true;
                 }
             string sides = right && left ? "DX + SX" : right ? "DX" : left ? "SX" : "NESSUNO";
-            devicesText = e.MiddlewareRunning ? sides : sides + " · avvio";
+            devicesText = e.MiddlewareRunning ? sides : sides + " (avvio)";
             devicesState = right || left ? (e.MiddlewareRunning ? 1 : 2) : 2;
         }
 
@@ -242,16 +242,16 @@ namespace HapticResearch.UI
             if (side == HandSide.Left) calibLeftState = state; else calibRightState = state;
         }
 
-        private static string CalibWord(int state) => state == 1 ? "IN CORSO" : state == 2 ? "OK" : state == 3 ? "FALLITA" : "—";
+        private static string CalibWord(int state) => state == 1 ? "IN CORSO" : state == 2 ? "OK" : state == 3 ? "FALLITA" : "n/d";
         private static Color CalibColor(int state) => state == 1 ? HudTheme.Warn : state == 2 ? HudTheme.Ok : state == 3 ? HudTheme.Warn : HudTheme.Grey;
 
-        // "DX OK · SX IN CORSO": ogni guanto col suo stato.
+        // "DX OK, SX IN CORSO": ogni guanto col suo stato.
         private string CalibText()
         {
-            if (calibLeftState == 0 && calibRightState == 0) return HudTheme.Rich(HudTheme.Grey, "—");
+            if (calibLeftState == 0 && calibRightState == 0) return HudTheme.Rich(HudTheme.Grey, "n/d");
             string right = calibRightState == 0 ? null : HudTheme.Rich(CalibColor(calibRightState), "DX " + CalibWord(calibRightState));
             string left = calibLeftState == 0 ? null : HudTheme.Rich(CalibColor(calibLeftState), "SX " + CalibWord(calibLeftState));
-            return right != null && left != null ? right + " · " + left : right ?? left;
+            return right != null && left != null ? right + ", " + left : right ?? left;
         }
 
         private void TrackTrackers()
@@ -407,8 +407,8 @@ namespace HapticResearch.UI
             HardwareRow(set, ref y, x, cw, "Middleware WEART", HudTheme.Rich(middleware ? HudTheme.Ok : HudTheme.Warn, middleware ? "CONNESSO" : "NON CONNESSO"));
             HardwareRow(set, ref y, x, cw, "TouchDIVER Pro", middleware
                 ? HudTheme.Rich(devicesState == 1 ? HudTheme.Ok : devicesState == 2 ? HudTheme.Warn : HudTheme.Grey, devicesText)
-                : HudTheme.Rich(HudTheme.Grey, "—"));
-            HardwareRow(set, ref y, x, cw, "Calibrazione", middleware ? CalibText() : HudTheme.Rich(HudTheme.Grey, "—"));
+                : HudTheme.Rich(HudTheme.Grey, "n/d"));
+            HardwareRow(set, ref y, x, cw, "Calibrazione", middleware ? CalibText() : HudTheme.Rich(HudTheme.Grey, "n/d"));
             string trk; Color trkColor;
             if (trackers == null) { trk = "ASSENTE"; trkColor = HudTheme.Grey; }
             else if (Time.unscaledTime - lastTrackerMoveTime < trackerActiveWindow) { trk = "ATTIVO"; trkColor = HudTheme.Ok; }
@@ -435,8 +435,8 @@ namespace HapticResearch.UI
 
         private string FooterText(bool demoOn)
         {
-            string text = $"F1 diagnostica · F2 sottotitoli · F3 HUD\n{handSwitchKeyLabel} switch mano · M muta voce · R ripeti";
-            if (demoOn) text += "\nDemo: mouse muove · click chiude · G afferra · Q/E su/giu'";
+            string text = $"F1 diagnostica | F2 sottotitoli | F3 HUD\n{handSwitchKeyLabel} switch mano | M muta voce | R ripeti";
+            if (demoOn) text += "\nDemo: mouse muove | click chiude | G afferra | Q/E su/giu'";
             return text;
         }
 
@@ -463,12 +463,12 @@ namespace HapticResearch.UI
         private void DrawPill(bool demoOn)
         {
             bool demoAvailable = demo != null && demo.isActiveAndEnabled;
-            string demoLabel = !demoAvailable ? "MANI DEMO —" : demoOn ? "MANI DEMO ON" : "MANI DEMO OFF";
-            string pid = SessionLogger.Instance != null ? SessionLogger.Instance.ParticipantId : "—";
+            string demoLabel = !demoAvailable ? "MANI DEMO n/d" : demoOn ? "MANI DEMO ON" : "MANI DEMO OFF";
+            string pid = SessionLogger.Instance != null ? SessionLogger.Instance.ParticipantId : "n/d";
             int secs = Mathf.FloorToInt(level.ElapsedSeconds);
             string timer = $"{secs / 60:00}:{secs % 60:00}";
             string dot = HudTheme.Rich(demoOn ? HudTheme.Ok : HudTheme.Grey, "●");
-            var content = new GUIContent($"{dot}  {demoLabel}  ·  {pid}  ·  {timer}");
+            var content = new GUIContent($"{dot}  {demoLabel}  |  {pid}  |  {timer}");
 
             var size = pillStyle.CalcSize(content);
             var rect = new Rect(Screen.width - size.x - 40f - 24f, 24f, size.x + 40f, size.y + 20f);
