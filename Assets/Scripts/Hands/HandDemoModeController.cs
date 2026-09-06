@@ -3,6 +3,7 @@ using WeArt.Components;
 using HapticResearch.Haptics;
 using HapticResearch.Levels;
 
+using HapticResearch.UI;
 namespace HapticResearch.Hands
 {
     /// <summary>
@@ -79,17 +80,24 @@ namespace HapticResearch.Hands
         private GameObject leftGraspedShape;
         private GameObject rightGraspedShape;
 
-        // Manager del livello: le mani sono usabili solo mentre il livello è avviato.
-        private ShapeRecognitionManager shapeManager;
+        // Livello della scena: le mani sono usabili solo mentre il livello è avviato.
+        private LevelController levelManager;
+
+        // Istanza che "possiede" gli static: al cambio scena il controller vecchio viene
+        // disabilitato DOPO l'OnEnable di quello nuovo e non deve azzerare il suo stato.
+        private static HandDemoModeController owner;
 
         private void OnEnable()
         {
+            owner = this;
             Exists = true;
             DemoActive = EvaluateAuto();
         }
 
         private void OnDisable()
         {
+            if (owner != this) return;
+            owner = null;
             Exists = false;
             DemoActive = false;
         }
@@ -109,8 +117,8 @@ namespace HapticResearch.Hands
         {
             if (inputManager == null)
                 inputManager = FindFirstObjectByType<HandInputManager>();
-            if (shapeManager == null)
-                shapeManager = FindFirstObjectByType<ShapeRecognitionManager>();
+            if (levelManager == null)
+                levelManager = LevelController.Find();
 
             if (inputManager != null)
             {
@@ -140,7 +148,7 @@ namespace HapticResearch.Hands
 
             // Mani utilizzabili solo se demo attiva E livello avviato (IsRunning). Finché è "in
             // attesa di avvio", le mani restano ferme: prima premi "Avvia livello".
-            MovementAllowed = DemoActive && (shapeManager == null || shapeManager.IsRunning);
+            MovementAllowed = DemoActive && (levelManager == null || levelManager.IsRunning);
 
             if (!MovementAllowed)
             {
@@ -158,6 +166,14 @@ namespace HapticResearch.Hands
             // Le dita si chiudono se la mano tiene una forma (o, come feedback, tenendo il click SX).
             DriveFingers(leftClose, leftGraspedShape != null || (inputManager.IsLeftActive && Input.GetMouseButton(0)));
             DriveFingers(rightClose, rightGraspedShape != null || (!inputManager.IsLeftActive && Input.GetMouseButton(0)));
+        }
+
+        // Accende/spegne la demo da fuori (pill dell'HUD operatore): da qui in poi la modalità
+        // Auto non sovrascrive più la scelta, come col toggle del pannello.
+        public void SetDemoActive(bool on)
+        {
+            userOverrode = true;
+            DemoActive = on;
         }
 
         // Interpola la chiusura delle dita di una mano verso aperta/chiusa (pilota closeAmounts
@@ -351,7 +367,8 @@ namespace HapticResearch.Hands
 
         private void OnGUI()
         {
-            if (!showToggle)
+            // Con l'HUD operatore lo stato demo sta nella pill in alto a destra.
+            if (!showToggle || OperatorHud.Active)
                 return;
 
             EnsureStyles();
@@ -363,7 +380,7 @@ namespace HapticResearch.Hands
             GUI.Box(rect, GUIContent.none, panelStyle);
             GUILayout.BeginArea(new Rect(rect.x, rect.y, rect.width, rect.height));
 
-            GUILayout.Label("  UNIBS · Modalità Demo", titleStyle);
+            GUILayout.Label("  UNIBS - Modalità Demo", titleStyle);
 
             bool newVal = GUILayout.Toggle(DemoActive,
                 DemoActive ? "  Mani Demo: ON" : "  Mani Demo: OFF", toggleStyle);

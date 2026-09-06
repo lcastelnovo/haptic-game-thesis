@@ -33,7 +33,7 @@ import urllib.error
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-LINES_FILE = os.path.join(HERE, "voice_lines.json")
+LINES_FILE = os.path.join(REPO, "Assets", "Resources", "Voice", "voice_lines.json")  # unica fonte dei testi (usata anche dai sottotitoli in gioco)
 OUT_DIR = os.path.join(REPO, "Assets", "Resources", "Voice")
 KEY_FILE = os.path.join(HERE, ".elevenlabs.key")
 

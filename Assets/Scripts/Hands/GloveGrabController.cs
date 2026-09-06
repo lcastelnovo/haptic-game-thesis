@@ -1,10 +1,15 @@
 using UnityEngine;
 using System.Collections.Generic;
+using WeArt.Components;
 
 /// <summary>
 /// Afferrare/rilasciare oggetti chiudendo/aprendo le dita.
 /// Usa dati di closure da HandCloseController e contatti da HandCollisionController.
 /// Da attaccare allo stesso GameObject della mano (con HandGrabController).
+/// ATTENZIONE: è il grasp del guanto SIMULATO (scroll/tastiera). Coi guanti veri
+/// connessi resta dormiente: la presa reale la gestisce GloveGraspDetector, che non
+/// sposta gli oggetti. Senza questo stop, le chiusure reali dei thimble (che alimentano
+/// closeAmounts) facevano afferrare e trascinare forme a insaputa del partecipante.
 /// </summary>
 public class GloveGrabController : MonoBehaviour
 {
@@ -43,12 +48,36 @@ public class GloveGrabController : MonoBehaviour
 
     void Update()
     {
+        // Coi guanti VERI connessi questo controller non deve afferrare: closeAmounts
+        // riflette le dita reali e qui si aggancerebbero forme in silenzio durante
+        // l'esplorazione (il partecipante non vedente non può accorgersene). Se al momento
+        // della connessione qualcosa era in mano, va rilasciato subito.
+        if (IsRealDeviceConnected())
+        {
+            if (currentGrabbable != null)
+            {
+                currentGrabbable.OnRelease(handGrabController.grabPoint.position);
+                Debug.Log("[GloveGrabController] Device WEART connesso: rilascio e resto dormiente");
+                currentGrabbable = null;
+            }
+            return;
+        }
+
         if (closeController.closeAmounts == null) return;
 
         if (currentGrabbable == null)
             TryGrab();
         else
             TryRelease();
+    }
+
+    // Stesso segnale usato da GloveGraspDetector: "device presente" = socket middleware
+    // davvero aperto. Il getter Client crea il client alla prima lettura, quindi
+    // "Client != null" sarebbe sempre vero: l'unico segnale affidabile è IsConnected.
+    private bool IsRealDeviceConnected()
+    {
+        var c = WeArtController.Instance;
+        return c != null && c.Client != null && c.Client.IsConnected;
     }
 
     void TryGrab()

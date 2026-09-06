@@ -8,13 +8,16 @@ namespace HapticResearch.Audio
     // Le tracce sono file audio dentro Resources/Voice/ caricati PER NOME (chiave), non per
     // riferimento Inspector: cosi' aggiungere/rigenerare una voce = mettere il file in
     // Assets/Resources/Voice/<chiave>.mp3, senza ricablare nulla. La chiave nel gioco combacia
-    // con quella in Tools/voice_lines.json usata dallo script di generazione.
+    // con quella in Resources/Voice/voice_lines.json usata dallo script di generazione.
     //
     // Offline al 100%: in partita si sentono clip locali, nessuna chiamata di rete e nessuna
     // API key nel gioco (la key serve solo alla generazione, sul PC di sviluppo).
     //
     // Una sola battuta per volta: Speak() interrompe e parla subito, SpeakQueued() accoda.
     // Cosi' "istruzioni -> primo annuncio" o "giusto -> prossimo annuncio" non si sovrappongono.
+    //
+    // CurrentKey espone la chiave della battuta in riproduzione: i sottotitoli
+    // (VoiceSubtitles) la leggono e mostrano il testo corrispondente (VoiceLines).
     public class NarrationManager : MonoBehaviour
     {
         public static NarrationManager Instance { get; private set; }
@@ -28,11 +31,18 @@ namespace HapticResearch.Audio
         private AudioSource source;
         // Cache per chiave (memorizza anche i null: evita Resources.Load ripetute per clip mancanti).
         private readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
-        private readonly Queue<AudioClip> queue = new Queue<AudioClip>();
+        private readonly Queue<(string key, AudioClip clip)> queue = new Queue<(string key, AudioClip clip)>();
+        private string currentKey;
+
+        // Chiave della battuta in riproduzione, null quando la voce tace.
+        public string CurrentKey => currentKey;
 
         void Awake()
         {
-            if (Instance != null && Instance != this)
+            // Al cambio scena Unity fa l'Awake della scena nuova PRIMA di distruggere la
+            // vecchia: se l'istanza esistente sta in un'altra scena, questa la sostituisce
+            // (l'altra sparira' con la sua scena e non tocca Instance: vedi OnDestroy).
+            if (Instance != null && Instance != this && Instance.gameObject.scene == gameObject.scene)
             {
                 Destroy(this);
                 return;
@@ -54,11 +64,19 @@ namespace HapticResearch.Audio
 
         void Update()
         {
+            if (source == null) return;
+
             // Scodamento: appena finisce la battuta corrente, parte la prossima in coda.
-            if (queue.Count > 0 && source != null && !source.isPlaying)
+            if (queue.Count > 0 && !source.isPlaying)
             {
-                source.clip = queue.Dequeue();
+                var next = queue.Dequeue();
+                currentKey = next.key;
+                source.clip = next.clip;
                 source.Play();
+            }
+            else if (currentKey != null && !source.isPlaying)
+            {
+                currentKey = null; // battuta finita e coda vuota
             }
         }
 
@@ -81,6 +99,7 @@ namespace HapticResearch.Audio
             if (clip == null || source == null) return;
             queue.Clear();
             source.Stop();
+            currentKey = key;
             source.clip = clip;
             source.volume = volume;
             source.Play();
@@ -94,13 +113,14 @@ namespace HapticResearch.Audio
 
             if (!source.isPlaying && queue.Count == 0)
             {
+                currentKey = key;
                 source.clip = clip;
                 source.volume = volume;
                 source.Play();
             }
             else
             {
-                queue.Enqueue(clip);
+                queue.Enqueue((key, clip));
             }
         }
 
@@ -108,6 +128,7 @@ namespace HapticResearch.Audio
         {
             if (source != null) source.Stop();
             queue.Clear();
+            currentKey = null;
         }
 
         public bool IsSpeaking => (source != null && source.isPlaying) || queue.Count > 0;

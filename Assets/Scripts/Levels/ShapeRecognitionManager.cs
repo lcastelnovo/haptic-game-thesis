@@ -3,6 +3,7 @@ using UnityEngine;
 using HapticResearch.Experiment;
 using HapticResearch.Haptics;
 using HapticResearch.Audio;
+using HapticResearch.UI;
 
 namespace HapticResearch.Levels
 {
@@ -17,7 +18,7 @@ namespace HapticResearch.Levels
     //
     // La forma "tenuta" è letta da HandGrabController/GloveGrabController.CurrentGrabbable,
     // così funziona sia col mouse (desktop) sia col guanto (VR), senza toccare quei file.
-    public class ShapeRecognitionManager : MonoBehaviour
+    public class ShapeRecognitionManager : LevelController
     {
         private enum State { Idle, AwaitingSelection, LevelComplete }
 
@@ -77,12 +78,21 @@ namespace HapticResearch.Levels
         [SerializeField] private SessionLogger sessionLogger;
         [SerializeField] private string levelId = "level1_shape_recognition";
 
+        [Header("Identita' (HUD operatore)")]
+        [SerializeField] private int levelNumber = 1;
+        [SerializeField] private string levelTitle = "Riconoscimento forme";
+
         // --- runtime ---
         private State state = State.Idle;
 
         private readonly List<GameObject> spawned = new List<GameObject>();
         private readonly Dictionary<IGrabbable, RecognizableShape> grabbableToShape = new();
         private readonly Dictionary<RecognizableShape, ShapeDefinition> shapeToDef = new();
+
+        // Forme effettivamente preparate da SetupShapes: i round si costruiscono su queste,
+        // così una def mal configurata (senza Scene Instance né Prefab) non diventa mai un
+        // bersaglio impossibile da trovare sul tavolo.
+        private readonly List<ShapeDefinition> activeShapes = new List<ShapeDefinition>();
 
         private HandGrabController[] handGrabControllers;
         private GloveGrabController[] gloveGrabControllers;
@@ -97,17 +107,44 @@ namespace HapticResearch.Levels
 
         private RecognizableShape heldShape;     // forma attualmente in conteggio
         private RecognizableShape ignoredShape;  // forma sbagliata da rilasciare prima di riprovare
+        private string candidateSource;          // sorgente della presa candidata nell'ultimo scan
+        private string heldSource;               // sorgente della presa in conteggio (per log/diagnosi)
         private float holdTimer;
         private float cooldownTimer;
         private int currentRoundErrors;
         private float roundStartTime;
+        private float levelStartTime = -1f; // Time.time del via (-1 = mai partito)
+        private float levelEndTime = -1f;   // Time.time del completamento (-1 = in corso)
 
-        // --- stato pubblico (per il pannello operatore) ---
-        public bool IsRunning => state == State.AwaitingSelection;
-        public bool IsComplete => state == State.LevelComplete;
+        // --- stato pubblico (LevelController: HUD, voce, flusso) ---
+        public override string LevelId => levelId;
+        public override int LevelNumber => levelNumber;
+        public override string LevelTitle => levelTitle;
+        public override bool IsRunning => state == State.AwaitingSelection;
+        public override bool IsComplete => state == State.LevelComplete;
         public string CurrentTargetId => currentTarget != null ? currentTarget.Id : "-";
         public int CurrentRound => Mathf.Clamp(roundIndex + 1, 0, roundOrder.Count);
         public int TotalRounds => roundOrder.Count;
+
+        public override string StatusLine
+        {
+            get
+            {
+                if (IsComplete) return "completato";
+                if (IsRunning) return $"round {CurrentRound}/{TotalRounds}, trova: {CurrentTargetId}";
+                return "in attesa di avvio";
+            }
+        }
+
+        public override float ElapsedSeconds
+        {
+            get
+            {
+                if (levelStartTime < 0f) return 0f;
+                float end = levelEndTime >= 0f ? levelEndTime : Time.time;
+                return end - levelStartTime;
+            }
+        }
 
         void Awake()
         {
@@ -170,6 +207,7 @@ namespace HapticResearch.Levels
         private void SetupShapes()
         {
             ClearSpawned();
+            activeShapes.Clear();
 
             int count = shapes.Count;
             int spawnIndex = 0; // indice di layout per le sole forme istanziate
@@ -218,6 +256,7 @@ namespace HapticResearch.Levels
                 }
 
                 shapeToDef[rec] = def;
+                activeShapes.Add(def);
                 if (instantiated) spawned.Add(go); // solo le istanziate vanno distrutte al cleanup
             }
         }
@@ -265,12 +304,12 @@ namespace HapticResearch.Levels
             UpdateHold();
         }
 
-        public void StartLevel()
+        public override void StartLevel()
         {
             // Richiamabile in qualsiasi stato: l'operatore può avviare o riavviare/abortire.
-            if (shapes.Count == 0)
+            if (activeShapes.Count == 0)
             {
-                Debug.LogWarning("[ShapeRecognition] Nessuna forma configurata: impossibile avviare.");
+                Debug.LogWarning("[ShapeRecognition] Nessuna forma valida configurata: impossibile avviare.");
                 return;
             }
 
@@ -282,10 +321,12 @@ namespace HapticResearch.Levels
             BuildRoundOrder();
             roundIndex = -1;
             ignoredShape = null;
+            levelStartTime = Time.time;
+            levelEndTime = -1f;
             // Istruzioni parlate iniziali; il primo annuncio (in NextRound) viene ACCODATO cosi'
             // parte solo quando le istruzioni sono finite, senza sovrapporsi.
             Voice("instructions_intro", levelStartClip, false);
-            Log("level_start", $"{{\"shapes\":{shapes.Count}}}");
+            Log("level_start", $"{{\"shapes\":{activeShapes.Count}}}");
             NextRound();
         }
 
@@ -293,7 +334,7 @@ namespace HapticResearch.Levels
         private void BuildRoundOrder()
         {
             roundOrder.Clear();
-            for (int i = 0; i < shapes.Count; i++) roundOrder.Add(i);
+            for (int i = 0; i < activeShapes.Count; i++) roundOrder.Add(i);
             for (int i = roundOrder.Count - 1; i > 0; i--)
             {
                 int j = Random.Range(0, i + 1);
@@ -310,7 +351,7 @@ namespace HapticResearch.Levels
                 return;
             }
 
-            currentTarget = shapes[roundOrder[roundIndex]];
+            currentTarget = activeShapes[roundOrder[roundIndex]];
             currentRoundErrors = 0;
             heldShape = null;
             holdTimer = 0f;
@@ -333,7 +374,7 @@ namespace HapticResearch.Levels
         }
 
         // L'operatore può ri-annunciare il bersaglio (repeatKey, bottone UI o comando vocale).
-        public void RepeatAnnouncement()
+        public override void RepeatAnnouncement()
         {
             if (state == State.AwaitingSelection) AnnounceTarget(false); // subito, interrompe
         }
@@ -356,6 +397,7 @@ namespace HapticResearch.Levels
             {
                 // nuova presa: riparte il timer di hold
                 heldShape = candidate;
+                heldSource = candidateSource;
                 holdTimer = 0f;
                 StartHoldAudio();
             }
@@ -372,6 +414,7 @@ namespace HapticResearch.Levels
             if (heldShape != null || holdTimer > 0f)
             {
                 heldShape = null;
+                heldSource = null;
                 holdTimer = 0f;
                 StopHoldAudio();
             }
@@ -384,37 +427,46 @@ namespace HapticResearch.Levels
         {
             candidate = null;
             ignoredStillHeld = false;
+            candidateSource = null;
 
             // Presa desktop (mouse) e guanto simulato, via i nostri controller.
             for (int i = 0; i < handGrabControllers.Length; i++)
-                InspectHeld(handGrabControllers[i].CurrentGrabbable, ref candidate, ref ignoredStillHeld);
+                InspectHeld(handGrabControllers[i].CurrentGrabbable, "mouse", ref candidate, ref ignoredStillHeld);
             for (int i = 0; i < gloveGrabControllers.Length; i++)
-                InspectHeld(gloveGrabControllers[i].CurrentGrabbable, ref candidate, ref ignoredStillHeld);
+                InspectHeld(gloveGrabControllers[i].CurrentGrabbable, "guanto_sim", ref candidate, ref ignoredStillHeld);
 
             // Presa delle mani WEART (VR / guanto reale): legge l'oggetto afferrato dal bridge.
             if (graspBridge != null)
             {
-                InspectHeldObject(graspBridge.LeftGrasped, ref candidate, ref ignoredStillHeld);
-                InspectHeldObject(graspBridge.RightGrasped, ref candidate, ref ignoredStillHeld);
+                InspectHeldObject(graspBridge.LeftGrasped, "weart_sx", ref candidate, ref ignoredStillHeld);
+                InspectHeldObject(graspBridge.RightGrasped, "weart_dx", ref candidate, ref ignoredStillHeld);
             }
         }
 
-        private void InspectHeld(IGrabbable grabbable, ref RecognizableShape candidate, ref bool ignoredStillHeld)
+        private void InspectHeld(IGrabbable grabbable, string source, ref RecognizableShape candidate, ref bool ignoredStillHeld)
         {
             if (grabbable == null || !grabbableToShape.TryGetValue(grabbable, out var rec)) return;
             if (rec == ignoredShape) ignoredStillHeld = true;
-            else if (candidate == null) candidate = rec;
+            else if (candidate == null)
+            {
+                candidate = rec;
+                candidateSource = source;
+            }
         }
 
         // Variante per la presa WEART: dall'oggetto fisico afferrato (il GameObject del
         // WeArtTouchableObject, anche una sotto-mesh) risale alla forma con GetComponentInParent.
-        private void InspectHeldObject(GameObject grasped, ref RecognizableShape candidate, ref bool ignoredStillHeld)
+        private void InspectHeldObject(GameObject grasped, string source, ref RecognizableShape candidate, ref bool ignoredStillHeld)
         {
             if (grasped == null) return;
             var rec = grasped.GetComponentInParent<RecognizableShape>();
             if (rec == null || !shapeToDef.ContainsKey(rec)) return;
             if (rec == ignoredShape) ignoredStillHeld = true;
-            else if (candidate == null) candidate = rec;
+            else if (candidate == null)
+            {
+                candidate = rec;
+                candidateSource = source;
+            }
         }
 
         private void Confirm(RecognizableShape shape)
@@ -422,27 +474,39 @@ namespace HapticResearch.Levels
             shapeToDef.TryGetValue(shape, out var def);
             bool correct = def != null && currentTarget != null && def.Id == currentTarget.Id;
             float elapsed = Time.time - roundStartTime;
+            string source = heldSource ?? "-"; // da salvare prima del reset di heldShape/heldSource
 
             StopHoldAudio();
             holdTimer = 0f;
             cooldownTimer = selectionCooldown;
             ignoredShape = shape; // va rilasciata prima che un nuovo hold conti
             heldShape = null;
+            heldSource = null;
+
+            // Dopo OGNI conferma azzera le prese del bridge WEART: serve un nuovo gesto
+            // apri->chiudi per riprendere una forma. Senza questo, una presa rimasta appesa
+            // (es. l'altra mano ferma su una forma con le dita chiuse, che non rilascia mai)
+            // riconferma la stessa forma all'infinito; e la forma indovinata ancora in mano
+            // verrebbe conteggiata come risposta (sbagliata) del round successivo.
+            if (graspBridge != null) graspBridge.Clear();
 
             if (correct)
             {
                 shape.MarkSolved(); // feedback visivo: la forma indovinata diventa verde
                 Voice("answer_correct", correctClip, true); // "esatto" -> poi il prossimo annuncio accodato
                 Log("answer_correct",
-                    $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"errors\":{currentRoundErrors},\"timeSec\":{elapsed:0.00}}}");
+                    $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"errors\":{currentRoundErrors},\"timeSec\":{elapsed:0.00},\"source\":\"{source}\"}}");
                 NextRound();
             }
             else
             {
                 currentRoundErrors++;
+                // La sorgente in chiaro anche in Console: se una presa "fantasma" (es. un
+                // controller sbagliato) maschera quella del guanto, l'operatore lo vede subito.
+                Debug.LogWarning($"[ShapeRecognition] SBAGLIATO: tenuta '{def?.Id}' (oggetto '{shape.name}', sorgente {source}), bersaglio '{currentTarget.Id}'");
                 Voice("answer_wrong", wrongClip, false); // subito; stesso bersaglio, niente ri-annuncio
                 Log("answer_wrong",
-                    $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"chosen\":\"{def?.Id}\",\"errors\":{currentRoundErrors}}}");
+                    $"{{\"round\":{roundIndex + 1},\"target\":\"{currentTarget.Id}\",\"chosen\":\"{def?.Id}\",\"errors\":{currentRoundErrors},\"source\":\"{source}\"}}");
                 // stesso bersaglio: si resta in AwaitingSelection
             }
         }
@@ -450,6 +514,7 @@ namespace HapticResearch.Levels
         private void LevelComplete()
         {
             state = State.LevelComplete;
+            levelEndTime = Time.time;
             currentTarget = null;
             StopHoldAudio();
             Voice("level_complete", levelCompleteClip, true); // dopo l'ultimo "esatto" accodato
@@ -476,7 +541,10 @@ namespace HapticResearch.Levels
                 else nm.Speak(key);
                 return;
             }
-            PlayOneShot(fallback); // nessuna traccia vocale: comportamento audio originale
+            // Nessuna traccia vocale: comportamento audio originale. Il testo va comunque
+            // nei sottotitoli, cosi' l'operatore vede cosa e' stato chiesto.
+            if (fallback != null) VoiceSubtitles.ReportSaid(VoiceLines.TextOf(key) ?? $"[{key}]", fallback.length);
+            PlayOneShot(fallback);
         }
 
         private void StartHoldAudio()

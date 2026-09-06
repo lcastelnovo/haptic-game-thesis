@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using HapticResearch.Levels;
 using HapticResearch.Experiment;
+using HapticResearch.UI;
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
 using UnityEngine.Windows.Speech;
 #endif
@@ -33,8 +34,8 @@ namespace HapticResearch.Voice
         public enum VoiceConfidence { High, Medium, Low }
 
         [Header("Riferimenti")]
-        [Tooltip("Se null, cerca uno ShapeRecognitionManager in scena all'avvio.")]
-        [SerializeField] private ShapeRecognitionManager manager;
+        [Tooltip("Se null, cerca il LevelController della scena all'avvio (Level1 o labirinto).")]
+        [SerializeField] private LevelController manager;
 
         [Header("Attivazione")]
         [Tooltip("Il microfono parte in ascolto all'avvio della scena.")]
@@ -90,7 +91,7 @@ namespace HapticResearch.Voice
 
         void Awake()
         {
-            if (manager == null) manager = FindFirstObjectByType<ShapeRecognitionManager>();
+            if (manager == null) manager = LevelController.Find();
             sessionLogger = SessionLogger.Instance;
 
             // AudioSource 2D dedicato: la conferma "comando ricevuto" si sente sempre.
@@ -142,7 +143,7 @@ namespace HapticResearch.Voice
         {
             if (manager == null)
             {
-                Debug.LogWarning("[VoiceCommand] Nessun ShapeRecognitionManager in scena: comandi vocali disattivati.");
+                Debug.LogWarning("[VoiceCommand] Nessun LevelController in scena: comandi vocali disattivati.");
                 return;
             }
 
@@ -185,11 +186,25 @@ namespace HapticResearch.Voice
 
         private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
         {
-            if (!voiceEnabled) return;
-            if (!actions.TryGetValue(args.text, out var action)) return;
+            // Ogni frase riconosciuta finisce nei sottotitoli, anche se poi non fa nulla:
+            // l'operatore vede il perche' invece di chiedersi se il microfono funziona.
+            string confidence = args.confidence.ToString();
+            if (!voiceEnabled)
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "microfono muto");
+                return;
+            }
+            if (!actions.TryGetValue(args.text, out var action))
+            {
+                VoiceSubtitles.ReportHeard(args.text, confidence, false, "frase non in vocabolario");
+                return;
+            }
 
             lastRecognized = args.text;
+            VoiceSubtitles.ReportHeard(args.text, confidence, true);
             if (commandAckClip != null) ackSource.PlayOneShot(commandAckClip);
+            // Fetch pigro: il SessionLogger potrebbe fare Awake dopo di noi.
+            if (sessionLogger == null) sessionLogger = SessionLogger.Instance;
             sessionLogger?.Log(levelId, "voice_command",
                 "{\"phrase\":\"" + args.text + "\",\"confidence\":\"" + args.confidence + "\"}");
             action.Invoke();
@@ -219,7 +234,8 @@ namespace HapticResearch.Voice
 
         void OnGUI()
         {
-            if (!showStatus) return;
+            // Con l'HUD operatore attivo lo stato voce sta nella barra giocatore/narratore.
+            if (!showStatus || OperatorHud.Active) return;
             EnsureStyle();
 
             var rect = new Rect(Screen.width - 340f, Screen.height - 34f, 328f, 26f);
