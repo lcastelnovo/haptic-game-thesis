@@ -119,7 +119,34 @@ static class Program
             Check(g.ArmedRole == ThermalRole.Cool, "e lo prende da freddo");
         }
 
-        // 7) Reset riporta a neutro da qualunque stato
+        // 7) tremolio della mano DOPO erogazione: grazia protegge il canale
+        {
+            var g = new ThermalGate(3f, 0.4f);
+            int arms = 0, releases = 0;
+            g.OnArm += (id, role) => arms++;
+            g.OnRelease += (id, held, delivered) => releases++;
+
+            // Dito fermo oltre minHold: Delivered diventa true
+            g.SetTarget("tazza", ThermalRole.Warm);
+            Advance(g, 3.5f);
+            Check(g.Delivered, "dopo 3.5 s il dito ha ricevuto la temperatura");
+
+            // Esce per 0.2 s (sotto la grazia di 0.4 s) e rientra
+            g.SetTarget(null, ThermalRole.Neutral);
+            Advance(g, 0.2f);
+            Check(g.Armed, "il canale rimane armato: dentro la grazia");
+            g.SetTarget("tazza", ThermalRole.Warm);
+            Advance(g, 0.1f);
+            Check(releases == 0, "nessun OnRelease: il tremolio della mano non ha spento niente");
+            Check(arms == 1, "nessun secondo OnArm: il canale non si è disarmato");
+
+            // Ora esce per 0.5 s (sopra la grazia)
+            g.SetTarget(null, ThermalRole.Neutral);
+            Advance(g, 0.5f);
+            Check(releases == 1, "dopo la scadenza della grazia, OnRelease è stato inviato");
+        }
+
+        // 8) Reset riporta a neutro da qualunque stato
         {
             var g = new ThermalGate(3f, 0.4f);
             int releases = 0;
