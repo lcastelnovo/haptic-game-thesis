@@ -77,5 +77,8 @@ namespace HapticResearch.Labyrinth
 
         public bool ActuatesLeft => actuatedHand != HandSideSelection.Right;
         public bool ActuatesRight => actuatedHand != HandSideSelection.Left;
+
+        // Per il log: quale mano e' stata attuata in questa sessione.
+        public string ActuatedHandName() => actuatedHand.ToString().ToLowerInvariant();
     }
 }
