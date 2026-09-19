@@ -24,7 +24,6 @@ namespace HapticResearch.Exploration
 
         private string activeTag;
         private float activeFor;
-        private bool droppedDueToTimeout;
 
         public SuggestionScheduler(int maxSuggestions, float idleSeconds,
                                    int everyNDiscoveries, float timeoutSeconds)
@@ -74,7 +73,6 @@ namespace HapticResearch.Exploration
             given = 0;
             activeTag = null;
             activeFor = 0f;
-            droppedDueToTimeout = false;
         }
 
         public void Tick(float dt)
@@ -87,14 +85,12 @@ namespace HapticResearch.Exploration
                 activeTag = null;
                 activeFor = 0f;
                 idleTimer = 0f;
-                droppedDueToTimeout = true;
                 OnDropped?.Invoke(t);
                 return;
             }
 
             idleTimer += dt;
             if (given >= maxSuggestions || narrationBusy) return;
-            if (droppedDueToTimeout && given < maxSuggestions - 1) return;
 
             bool byIdle = idleTimer >= idleSeconds;
             bool byDiscoveries = everyNDiscoveries > 0 && discoveriesSinceLast >= everyNDiscoveries;

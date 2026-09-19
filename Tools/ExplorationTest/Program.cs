@@ -212,9 +212,10 @@ static class Program
             Check(s.HasActive && s.ActiveTag == "caldo", "la richiesta viva e' leggibile da fuori");
         }
 
-        // 5) scaduto il tempo cade in silenzio
+        // 5) scaduto il tempo cade in silenzio (tetto a 1: dopo la caduta non ne parte un'altra,
+        //    cosi' 'non resta appesa' verifica la caduta e non il caso di una seconda richiesta)
         {
-            var s = new SuggestionScheduler(5, 1f, 0, 60f) { TagPicker = () => "caldo" };
+            var s = new SuggestionScheduler(1, 1f, 0, 60f) { TagPicker = () => "caldo" };
             var dropped = new List<string>();
             s.OnDropped += t => dropped.Add(t);
             for (int i = 0; i < 800; i++) s.Tick(0.1f);   // 80 s
@@ -250,6 +251,20 @@ static class Program
             s.OnSuggest += t => given++;
             for (int i = 0; i < 300; i++) s.Tick(0.1f);
             Check(given == 0, "TagPicker vuoto: silenzio, non una richiesta senza contenuto");
+        }
+
+        // 9) dopo una caduta per timeout, le richieste successive continuano (non si zittisce il sistema)
+        {
+            var s = new SuggestionScheduler(3, 1f, 0, 5f) { TagPicker = () => "caldo" };
+            var given = new List<string>();
+            s.OnSuggest += t => given.Add(t);
+            var dropped = new List<string>();
+            s.OnDropped += t => dropped.Add(t);
+
+            for (int i = 0; i < 1000; i++) s.Tick(0.1f);   // 100 s
+
+            Check(given.Count >= 3, $"dopo timeout, continuano le richieste (sono {given.Count}, min 3)");
+            Check(dropped.Count >= 2, $"multiple cadute avvenute (sono {dropped.Count})");
         }
     }
 
