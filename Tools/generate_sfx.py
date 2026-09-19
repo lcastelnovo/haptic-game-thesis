@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 
 OUT_DIR = Path(__file__).resolve().parent.parent / "Assets" / "Audio" / "Level2"
+OUT_DIR_L3 = Path(__file__).resolve().parent.parent / "Assets" / "Audio" / "Level3"
 SR = 44100
 
 
@@ -62,6 +63,13 @@ def build_specs():
     off = (f"sine=frequency=196:sample_rate={SR}:duration={off_d},"
            f"tremolo=f=4:d=0.8,volume=0.20")
 
+    # Level 3: arriva una richiesta facoltativa. Due note brevi che SALGONO di poco,
+    # timbro piu' morbido di tutto il resto: e' un invito, non un ordine, e non deve
+    # somigliare ne' all'esito del bivio ne' alla campanella di scoperta.
+    hint = ("sine=frequency=587:sample_rate=%d:duration=0.12,afade=t=out:st=0.08:d=0.04[a];"
+            "sine=frequency=698:sample_rate=%d:duration=0.18,afade=t=out:st=0.06:d=0.12[b];"
+            "[a][b]concat=n=2:v=0:a=1,volume=0.30" % (SR, SR))
+
     return {
         "dwell_tone": dwell,
         "reading_ready": ready,
@@ -69,16 +77,25 @@ def build_specs():
         "branch_down": down,
         "dead_end": dead,
         "off_track_loop": off,
+        "suggestion_tone": hint,
     }
 
 
 # Questi ciclano all'infinito: WAV, perche' l'mp3 non e' gapless.
 LOOPING = {"off_track_loop"}
 
+# Suoni del Level 3: gli altri restano in Assets/Audio/Level2. I suoni CONDIVISI
+# (wall_bump come colpetto di contatto, checkpoint_chime come campanella di scoperta)
+# NON si duplicano: il Level 3 riusa quei file. Un secondo vocabolario sonoro per le
+# stesse cose sarebbe solo carico cognitivo in piu' per chi ha appena giocato il Level 2.
+LEVEL3 = {"suggestion_tone"}
+
 
 def generate(name: str, filt: str, force: bool) -> bool:
     ext = "wav" if name in LOOPING else "mp3"
-    out = OUT_DIR / f"{name}.{ext}"
+    out_dir = OUT_DIR_L3 if name in LEVEL3 else OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{name}.{ext}"
     if out.exists() and not force:
         print(f"  = {out.name} (gia' presente)")
         return False
