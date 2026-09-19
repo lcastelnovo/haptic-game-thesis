@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Banco di prova della logica a tempo del Level 3, eseguibile FUORI da Unity.
+
+        cd Tools/ExplorationTest && dotnet run
+
+    Perche' esiste: isteresi termica e programmazione dei suggerimenti sono macchine a
+    stati guidate dal tempo. Un errore li' non si vede in Scene view e nemmeno in Play
+    mode - si vede a fine sessione, quando nei log manca meta' della temperatura.
+
+    A differenza di MazeMapTest qui NON serve nessuna DLL di Unity: le tre classi
+    compilate sono C# puro. Se un giorno servisse aggiungere un 'using UnityEngine',
+    la risposta e' no: si sposta quel pezzo in un involucro MonoBehaviour.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>ExplorationTest</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/Scripts/Exploration/ThermalGate.cs" />
+  </ItemGroup>
+
+</Project>
