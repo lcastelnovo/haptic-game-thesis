@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a2222d94b3a0a4998ab61ebae246cdfa, type: 3}
+  m_Name: MazeLayout_Level2
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Labyrinth.MazeLayoutAsset
+  columns: 6
+  rows: 3
+  corridorWidth: 0.07
+  wallThickness: 0.03
+  wallHeight: 0.1
+  tableTopY: 0.85
+  center: {x: 0, y: -0.195}
+  pathCells:
+  - {x: 5, y: 0}
+  - {x: 4, y: 0}
+  - {x: 3, y: 0}
+  - {x: 2, y: 0}
+  - {x: 1, y: 0}
+  - {x: 1, y: 1}
+  - {x: 1, y: 2}
+  - {x: 2, y: 2}
+  - {x: 3, y: 2}
+  - {x: 4, y: 2}
+  - {x: 5, y: 2}
+  junctions:
+  - cell: {x: 3, y: 0}
+    correctDir: 3
+    deadEndDir: 0
+    label: primo bivio
+  - cell: {x: 1, y: 0}
+    correctDir: 0
+    deadEndDir: 3
+    label: secondo bivio
+  - cell: {x: 2, y: 2}
+    correctDir: 1
+    deadEndDir: 2
+    label: terzo bivio
+  entranceSide: 2
+  exitSide: 1
+  mirror: 0

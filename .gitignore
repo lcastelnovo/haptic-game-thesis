@@ -113,3 +113,7 @@ Archive.zip
 Tools/.elevenlabs.key
 Tools/*.key
 *.elevenlabs.key
+
+# Banco di prova .NET di MazeMap (Tools/MazeMapTest)
+Tools/**/bin/
+Tools/**/obj/

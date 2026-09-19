@@ -131,6 +131,40 @@ namespace HapticResearch.Voice
 
         public bool VoiceEnabled => voiceEnabled;
 
+        // --- Comandi registrati da altri script ------------------------------------------
+
+        // Frasi aggiuntive che un altro script vuole far riconoscere (es. "caldo"/"freddo"
+        // della taratura termica). Il deposito sta FUORI dal blocco Windows-only cosi'
+        // l'API compila su tutte le piattaforme e chi la usa non deve saperlo.
+        private readonly List<KeyValuePair<string[], Action>> extraCommands =
+            new List<KeyValuePair<string[], Action>>();
+
+        // Da chiamare in Awake/OnEnable, cioe' prima che il vocabolario venga costruito in
+        // Start. Dopo, serve Rebuild(): il vocabolario di KeywordRecognizer e' fissato alla
+        // costruzione e non si puo' allargare a caldo.
+        public void RegisterCommand(string[] phrases, Action action)
+        {
+            if (phrases == null || phrases.Length == 0 || action == null) return;
+            extraCommands.Add(new KeyValuePair<string[], Action>(phrases, action));
+        }
+
+        // Toglie i comandi registrati da quel delegato e ricostruisce il riconoscitore.
+        public void UnregisterCommand(Action action)
+        {
+            if (action == null) return;
+            int removed = extraCommands.RemoveAll(kv => kv.Value == action);
+            if (removed > 0) Rebuild();
+        }
+
+        // Ricostruisce il riconoscitore col vocabolario aggiornato.
+        public void Rebuild()
+        {
+#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
+            DisposeRecognizer();
+            BuildVocabularyAndStart();
+#endif
+        }
+
         // --- Riconoscimento (SOLO Windows) --------------------------------------------
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -141,17 +175,25 @@ namespace HapticResearch.Voice
 
         private void BuildVocabularyAndStart()
         {
-            if (manager == null)
+            actions.Clear();
+
+            // Senza LevelController restano comunque validi i comandi registrati da altri
+            // script: e' il caso della taratura, che gira prima che il livello parta.
+            if (manager == null && extraCommands.Count == 0)
             {
                 Debug.LogWarning("[VoiceCommand] Nessun LevelController in scena: comandi vocali disattivati.");
                 return;
             }
 
-            actions.Clear();
+            if (manager != null)
+            {
             RegisterPhrases(BaseStartPhrases, () => manager.StartLevel());
             RegisterPhrases(extraStartPhrases, () => manager.StartLevel());
             RegisterPhrases(BaseRepeatPhrases, () => manager.RepeatAnnouncement());
             RegisterPhrases(extraRepeatPhrases, () => manager.RepeatAnnouncement());
+            }
+
+            foreach (var kv in extraCommands) RegisterPhrases(kv.Key, kv.Value);
 
             if (actions.Count == 0) return;
 
@@ -220,7 +262,9 @@ namespace HapticResearch.Voice
             }
         }
 
-        void OnDestroy()
+        void OnDestroy() => DisposeRecognizer();
+
+        private void DisposeRecognizer()
         {
             if (recognizer == null) return;
             recognizer.OnPhraseRecognized -= OnPhraseRecognized;

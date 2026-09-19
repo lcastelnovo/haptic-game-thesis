@@ -163,18 +163,92 @@ Apprendimento braille a 3 livelli:
   in-level, flusso di fine livello e demo girano identici in tutti i livelli
 - `ShapeRecognitionManager` - Level 1: annuncia una forma, il partecipante la afferra e la
   tiene 5 s per confermare; 4 forme in ordine casuale
-- `LabyrinthManager` - Level 2: prima trova l'ingresso (faro sonoro 2D che batte più
-  veloce avvicinandosi), poi segue il corridoio con l'indice fino all'uscita passando
-  per le tappe (`MazeZone`: ingresso, checkpoint, uscita, in ordine, solo XZ). Tocco
-  muro = colpetto + conteggio + log (`Collider.ClosestPoint` sulla punta proiettata a
-  y=0.9). Punte = `WeArtHapticObject` Index: demo ON → mani mouse sotto `HandManager`,
-  demo OFF → mani `WEART/Hands` mosse dai tracker. Il labirinto di Luca (34 cubi +
-  pad termici Caldino/Freddo) non ha un unico corridoio obbligato: le tappe sono
-  provvisorie nel corridoio in basso e si spostano dall'Inspector
+- `LabyrinthManager` - Level 2: vedi la sezione **Labirinto** più sotto
+- `FingerProbeSource` / `WallContactTracker` / `ProximityBeacon`: pezzi estratti dal
+  labirinto ma riusabili da qualunque livello. Punte = `WeArtHapticObject` con
+  `ActuationPointFlags.Index`, filtrate su `HandDemoModeController.DemoActive`: demo ON →
+  mani mouse sotto `HandManager`, demo OFF → mani `WEART/Hands` mosse dai tracker.
+  `WallContactTracker` conta gli **episodi** di contatto (strisciare lungo una parete è
+  un episodio solo), non i frame
 - `LevelFlowController` gestisce la fine del livello: suggerimento parlato, "avanti"/N (o
   "menu"/N nel labirinto) → scena successiva; Invio = nuovo partecipante
 - `MainMenuManager`: benvenuto parlato in-level a livello fermo, R lo ripete
 - `OperatorControls`: pannello storico, si spegne da solo quando c'è l'`OperatorHud`
+
+### Labirinto (`Assets/Scripts/Labyrinth/`) - Level 2
+
+Il livello è un **albero di decisioni con bivi termici**, non un labirinto a guida termica
+continua. Il motivo è fisico e va ricordato prima di riproporre l'idea del gradiente:
+l'attuatore Peltier impiega **2-3 s** a raggiungere il set-point e l'SDK considera 15 cm/s
+la velocità "veloce" del dito (`WeArtCommon.MaxSpeedForMaxTextVelocity`), quindi quando il
+calore arriva il dito è già uno o due corridoi più in là. Il canale termico non è
+campionabile abbastanza in fretta per fare da gradiente; una **scelta discreta a sosta** sì.
+
+Flusso: trova l'ingresso (il perimetro è chiuso da un solo varco, lo si trova seguendo il
+bordo col dito; il faro sonoro aiuta ma non è l'unico appiglio) → segue il corridoio → a
+ogni bivio appoggia il dito all'imbocco di un ramo e lo tiene fermo ~2.5 s → caldo = strada
+giusta, freddo = sbagliata. **Ne basta una**: l'altro ramo è l'opposto per costruzione.
+
+- `MazeLayoutAsset` — ScriptableObject in `Assets/Settings/Labyrinth/`: griglia, misure,
+  percorso, bivi, varchi di ingresso/uscita, specularità per i mancini. È **il dato
+  dell'esperimento**, non un dettaglio: per una variante si duplica l'asset, così resta
+  scritto quale labirinto ha giocato chi. `Validate()` rifiuta anelli, vicoli ciechi
+  condivisi e rami scollegati **prima** di generare: in Scene view non si noterebbero
+- `MazeMap` — classe pura (niente MonoBehaviour): griglia fine dove gli indici pari sono
+  linee di muro e i dispari corsie di corridoio. Espone `Locate` (punto → cella / muro /
+  varco / fuori, in O(1)), `WallRuns()` (blocchi di muro già fusi) e il percorso. La
+  logica di gioco interroga **questa**, non i collider: i collider servono solo a far
+  sentire muri e piastrelle ai guanti
+- `MazeRuntime` — il labirinto di questa scena: tiene il layout, costruisce la mappa e
+  disegna i gizmo. **Il sistema di riferimento è il suo stesso `Transform`**, non quello
+  del tavolo: la geometria è generata come sua figlia, così logica e cubi in scena non
+  possono divergere. Va appeso al root `Table` (non a `TableTop`, che è scalato)
+
+**Da che parte è seduto il partecipante.** Il layout è scritto in *coordinate del
+partecipante*: lui a −z che guarda verso +z, la sua destra a +x. In `Labyrinth.unity` è
+dalla parte opposta — `FrontalCamera` sta a z = +0.8 e guarda verso −z, e
+`RightCalibrationTarget` è a z = +0.291 — quindi **il bordo vicino a lui è z = +0.4** e
+`participantYaw` del layout vale 180°. Il builder applica quella rotazione al root `Maze`.
+Sbagliare segno qui non dà nessun errore: mette solo il labirinto nella metà del tavolo
+che da seduto non si raggiunge. `Tools/MazeMapTest` lo controlla apposta (ingombro nella
+metà vicina, tutto entro 40 cm di allungo, ingresso dal lato della mano dominante)
+- `IJunctionCue` + `JunctionCueBase` + `ThermalJunctionCue` / `AudioJunctionCue` — la
+  condizione sperimentale. La **sosta sta nella base comune**, non nelle sottoclassi: il
+  timing dev'essere identico fra le due condizioni, altrimenti il confronto misurerebbe
+  la durata dell'interazione invece del canale sensoriale
+- `HapticProfile` — ScriptableObject di taratura del partecipante (caldo/freddo/neutro,
+  durata sosta, stiffness e texture di muri e piastrelle, mano attuata)
+- `ThermalCalibrationStep` — scala adattiva 2-down/1-up che misura la soglia termica del
+  partecipante e ne ricava i valori di gioco (soglia × margine). **K** avvia, si risponde
+  a voce ("caldo"/"freddo") o con **C**/**F** quando il microfono non c'è
+
+**Geometria: si rigenera, non si sposta a mano.** `HapticResearch/Level 2/Genera geometria
+labirinto` (`MazeGeometryBuilder`) costruisce muri, piastrelle e tappe dal layout. Il
+vecchio labirinto (34 cubi + pad `Caldino`/`Freddo`) finisce sotto il root disattivato
+`Labirinto_vecchio`, e `Assets/Scenes/Labyrinth_old.unity` è la copia intera della scena
+com'era.
+
+**Perché la temperatura NON passa dai `WeArtTouchableObject`:** va armata un bivio per
+volta, va riportata a neutro appena il dito lascia la piastrella (così il raffreddamento
+comincia durante lo spostamento) e la via diretta
+`WeArtController.Instance.Client.SendMessage(new SetTemperatureMessage {...})` non passa
+dal gate `isActuating`, che nel setup desktop non si apre. Senza middleware non esplode:
+il livello resta giocabile, solo senza canale termico.
+
+**Igiene sperimentale:** ramo giusto e ramo sbagliato sono **visivamente identici**. Se
+l'operatore vedesse la risposta sul tavolo rischierebbe di segnalarla senza volerlo. La
+distinzione vive solo nei gizmo dell'editor.
+
+**Condizione A/B** su `SessionLogger.condition`: `audio` usa il cue sonoro, qualunque
+altro valore quello termico (`forcedCondition` sul manager forza la scelta nei test).
+
+**Prova dell'aritmetica:** `cd Tools/MazeMapTest && dotnet run` compila i `MazeMap.cs` e
+`MazeLayoutValidator.cs` veri ed esegue i controlli fuori da Unity: celle che si
+rilocalizzano, blocchi di muro non sovrapposti, area che torna, perimetro chiuso,
+orientamento rispetto al partecipante, e sei layout malformati che devono essere
+rifiutati. È l'unico test automatico del progetto: se tocchi la griglia, rilancialo.
+Attenzione: gira solo su codice **gestito**, niente `Quaternion.Euler` o altre API che
+chiamano il runtime nativo di Unity.
 
 ### Grid & Objects
 - `BuildGrid` (`Assets/Scripts/Grid/`): snap grid 13×8, cell size 0.075m, niente overlap
@@ -193,8 +267,12 @@ Apprendimento braille a 3 livelli:
   Per aggiungere una battuta: nuova chiave nel JSON, poi
   `python3 Tools/generate_voice_macos.py --only <chiave>` (voce macOS Alice) o
   `generate_voice.py` (ElevenLabs). Chiavi Level 2: `level2_*`, `menu_back`
-- Suoni sintetici del labirinto in `Assets/Audio/Level2/` (generati con ffmpeg:
-  colpetto muro, beep del faro, campanella checkpoint)
+- Suoni non verbali del labirinto in `Assets/Audio/Level2/`, generati da
+  `python3 Tools/generate_sfx.py` (`--force` rigenera, `--only <nomi>` fa i singoli):
+  colpetto muro, beep del faro, campanella, tono della sosta, colpetto di lettura
+  pronta, esiti su/giù della condizione audio, vicolo cieco, loop fuori percorso.
+  **Non farli a mano**: la ricetta ffmpeg sta nello script. I clip che ciclano davvero
+  sono WAV, non mp3: l'mp3 ha il padding dell'encoder e farebbe un clic a ogni giro
 - `VoiceSubtitles` (`Assets/Scripts/UI/`): sottotitoli per l'operatore: riga GIOCATORE
   (frase riconosciuta dal microfono, confidenza, esito) e riga NARRATORE (testo della
   battuta in corso). Le due etichette si cambiano dall'Inspector. Si auto-installa in ogni scena, toggle **F2**. Posizione per scena
@@ -274,6 +352,8 @@ da container, niente collider/rigidbody sul parent.
 | Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
 | N | Livello successivo (Level 1) o torna al menu (Level 2), solo a livello completato |
 | M | Muta / riattiva il microfono |
+| K | Avvia la taratura termica (Level 2), Esc la interrompe |
+| C / F | Risposta "caldo" / "freddo" in taratura, se il microfono non c'è |
 
 In VR la mappatura passa al controller / tracking nativo, la sorgente attiva è gestita
 da `HandInputManager`.

@@ -9,6 +9,7 @@ using HapticResearch.Branding;
 using HapticResearch.Debugging;
 using HapticResearch.Experiment;
 using HapticResearch.Hands;
+using HapticResearch.Labyrinth;
 using HapticResearch.Levels;
 using HapticResearch.Voice;
 
@@ -35,16 +36,7 @@ namespace HapticResearch.EditorTools
         private const string Level1Path = "Assets/Scenes/Level1_ShapeRecognition.unity";
         private const string LeftHandPrefab = "Packages/com.weart.sdk/Runtime/Prefabs/WEARTLeftHand.prefab";
         private const string RightHandPrefab = "Packages/com.weart.sdk/Runtime/Prefabs/WEARTRightHand.prefab";
-
-        // Tappe provvisorie nel corridoio in basso (tra i muri 26/27 sopra e 16/15 sotto):
-        // ingresso nella stanzetta a sinistra (pad freddo), meta sotto il pad caldo, uscita
-        // verso destra. Si spostano dall'Inspector quando il labirinto cambia.
-        private static readonly (string name, MazeZone.Kind kind, string label, Vector3 pos)[] DefaultZones =
-        {
-            ("Zona_Ingresso", MazeZone.Kind.Entrance, "ingresso", new Vector3(-0.60f, 0.851f, -0.23f)),
-            ("Zona_Meta", MazeZone.Kind.Checkpoint, "meta", new Vector3(-0.30f, 0.851f, -0.175f)),
-            ("Zona_Uscita", MazeZone.Kind.Exit, "uscita", new Vector3(0.30f, 0.851f, -0.175f)),
-        };
+        private const string HapticProfilePath = "Assets/Settings/Labyrinth/HapticProfile_Default.asset";
 
         public static void ConfigureHeadless()
         {
@@ -107,7 +99,16 @@ namespace HapticResearch.EditorTools
                 if (EnsureLevelFlow(scene)) changes++;
                 if (EnsureSessionLogger(scene)) changes++;
                 if (EnsureGraspDebugPanel(scene)) changes++;
+                // La geometria del labirinto nasce dal MazeLayoutAsset: muri, piastrelle di
+                // scelta e tappe. Deve venire PRIMA del manager, che ne riceve i riferimenti.
+                if (!MazeGeometryBuilder.Build(scene, out string mazeReport))
+                {
+                    Debug.LogError("[Level2Setup] " + mazeReport);
+                    ok = false;
+                }
+                else { Debug.Log("[Level2Setup] " + mazeReport); changes++; }
                 if (EnsureLevelManager(scene)) changes++;
+                if (EnsureCalibrationStep(scene)) changes++;
                 DisableTrackerDebugger(scene);
                 EnsureInBuild();
             }
@@ -376,68 +377,60 @@ namespace HapticResearch.EditorTools
             var manager = created ? go.AddComponent<LabyrinthManager>() : existing;
             var so = new SerializedObject(manager);
 
-            // Muri: i cubi tattili radice di Luca (a y=0.9). I cubi di calibrazione dei
-            // tracker stanno sotto ViveTrackerManager e non sono radice: esclusi.
-            var walls = new List<Collider>();
-            foreach (var root in scene.GetRootGameObjects())
-            {
-                if (!root.name.StartsWith("Cube")) continue;
-                if (root.GetComponent<WeArtTouchableObject>() == null) continue;
-                if (Mathf.Abs(root.transform.position.y - 0.9f) > 0.02f) continue;
-                var col = root.GetComponent<Collider>();
-                if (col != null) walls.Add(col);
-            }
-            var wallsProp = so.FindProperty("walls");
-            if (created || wallsProp.arraySize == 0)
-            {
-                wallsProp.arraySize = walls.Count;
-                for (int i = 0; i < walls.Count; i++) wallsProp.GetArrayElementAtIndex(i).objectReferenceValue = walls[i];
-            }
+            // Muri, piastrelle e tappe li ha gia' cablati MazeGeometryBuilder: qui si
+            // collegano solo il labirinto e il profilo, e si riempiono le clip mancanti.
+            SetIfEmpty(so, "maze", FindInScene<MazeRuntime>(scene));
+            SetIfEmpty(so, "profile", AssetDatabase.LoadAssetAtPath<HapticProfile>(HapticProfilePath));
 
-            // Tappe: contenitore "MazeZones" con ingresso / meta / uscita, create solo se
-            // mancano; una lista gia' compilata a mano (piu' tappe, posizioni diverse) resta.
-            var zonesProp = so.FindProperty("zones");
-            var zonesRoot = FindRoot(scene, "MazeZones") ?? NewInScene("MazeZones", scene);
-            var zones = new List<MazeZone>();
-            foreach (var (name, kind, label, pos) in DefaultZones)
-            {
-                var t = zonesRoot.transform.Find(name);
-                MazeZone z;
-                if (t == null)
-                {
-                    var zgo = new GameObject(name);
-                    zgo.transform.SetParent(zonesRoot.transform, false);
-                    zgo.transform.position = pos;
-                    z = zgo.AddComponent<MazeZone>();
-                    var zso = new SerializedObject(z);
-                    zso.FindProperty("kind").enumValueIndex = (int)kind;
-                    zso.FindProperty("label").stringValue = label;
-                    zso.FindProperty("radius").floatValue = 0.06f;
-                    zso.ApplyModifiedPropertiesWithoutUndo();
-                }
-                else z = t.GetComponent<MazeZone>() ?? t.gameObject.AddComponent<MazeZone>();
-                zones.Add(z);
-            }
-            if (created || zonesProp.arraySize == 0)
-            {
-                zonesProp.arraySize = zones.Count;
-                for (int i = 0; i < zones.Count; i++) zonesProp.GetArrayElementAtIndex(i).objectReferenceValue = zones[i];
-            }
+            // I clip si assegnano solo se il campo e' VUOTO: chi ne ha messo uno a mano
+            // dall'Inspector non se lo vede sovrascrivere a ogni lancio del tool.
+            SetClipIfEmpty(so, "beaconClip", "Assets/Audio/Level2/beacon_beep.mp3");
+            SetClipIfEmpty(so, "wallBumpClip", "Assets/Audio/Level2/wall_bump.mp3");
+            SetClipIfEmpty(so, "checkpointClip", "Assets/Audio/Level2/checkpoint_chime.mp3");
+            SetClipIfEmpty(so, "exitClip", "Assets/Audio/Level2/exit_fanfare.mp3");
+            SetClipIfEmpty(so, "levelCompleteClip", "Assets/Audio/Level1/corretto.mp3");
+            SetClipIfEmpty(so, "dwellToneClip", "Assets/Audio/Level2/dwell_tone.mp3");
+            SetClipIfEmpty(so, "readingReadyClip", "Assets/Audio/Level2/reading_ready.mp3");
+            SetClipIfEmpty(so, "branchCorrectClip", "Assets/Audio/Level2/branch_up.mp3");
+            SetClipIfEmpty(so, "branchWrongClip", "Assets/Audio/Level2/branch_down.mp3");
+            SetClipIfEmpty(so, "deadEndClip", "Assets/Audio/Level2/dead_end.mp3");
+            SetClipIfEmpty(so, "offTrackLoopClip", "Assets/Audio/Level2/off_track_loop.wav");
 
-            // Suoni (i clip sintetici di Assets/Audio/Level2 + "corretto" di Level 1 come
-            // riserva), solo alla creazione: da li' in poi comanda l'Inspector.
-            if (created)
-            {
-                so.FindProperty("beaconClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Level2/beacon_beep.mp3");
-                so.FindProperty("wallBumpClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Level2/wall_bump.mp3");
-                so.FindProperty("checkpointClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Level2/checkpoint_chime.mp3");
-                so.FindProperty("exitClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Level2/exit_fanfare.mp3");
-                so.FindProperty("levelCompleteClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/Level1/corretto.mp3");
-            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            Debug.Log($"[Level2Setup] LabyrinthManager {(created ? "creato" : "aggiornato")}: labirinto, profilo e suoni collegati.");
+            return created;
+        }
+
+        // Taratura termica del partecipante: gira prima del livello, a parte.
+        private static bool EnsureCalibrationStep(Scene scene)
+        {
+            var existing = FindInScene<ThermalCalibrationStep>(scene);
+            if (existing != null) return false;
+
+            var manager = FindInScene<LabyrinthManager>(scene);
+            var go = manager != null ? manager.gameObject : NewInScene("ThermalCalibration", scene);
+            var step = go.AddComponent<ThermalCalibrationStep>();
+
+            var so = new SerializedObject(step);
+            SetIfEmpty(so, "profile", AssetDatabase.LoadAssetAtPath<HapticProfile>(HapticProfilePath));
+            SetIfEmpty(so, "voiceCommands", FindInScene<VoiceCommandController>(scene));
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            Debug.Log($"[Level2Setup] LabyrinthManager: {walls.Count} muri, {zones.Count} tappe{(created ? "" : " (esistente, non toccato)")}.");
-            return created;
+            Debug.Log("[Level2Setup] ThermalCalibrationStep aggiunto (K avvia la taratura, C/F rispondono senza microfono).");
+            return true;
+        }
+
+        private static void SetIfEmpty(SerializedObject so, string path, UnityEngine.Object value)
+        {
+            var p = so.FindProperty(path);
+            if (p != null && p.objectReferenceValue == null && value != null) p.objectReferenceValue = value;
+        }
+
+        private static void SetClipIfEmpty(SerializedObject so, string path, string assetPath)
+        {
+            var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath);
+            if (clip == null) Debug.LogWarning($"[Level2Setup] Clip mancante: {assetPath}. Genera i suoni con Tools/generate_sfx.py.");
+            SetIfEmpty(so, path, clip);
         }
 
         private static void DisableTrackerDebugger(Scene scene)
