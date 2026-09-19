@@ -160,9 +160,103 @@ static class Program
         }
     }
 
+    static void SuggestionSchedulerTests()
+    {
+        Console.WriteLine("SuggestionScheduler");
+
+        // 1) dopo lo stallo propone qualcosa
+        {
+            var s = new SuggestionScheduler(3, 25f, 3, 60f) { TagPicker = () => "caldo" };
+            var given = new List<string>();
+            s.OnSuggest += t => given.Add(t);
+
+            for (int i = 0; i < 200; i++) s.Tick(0.1f);   // 20 s: ancora niente
+            Check(given.Count == 0, "prima dei 25 s di stallo non propone nulla");
+            for (int i = 0; i < 100; i++) s.Tick(0.1f);   // 30 s
+            Check(given.Count == 1 && given[0] == "caldo", "dopo lo stallo propone una richiesta");
+        }
+
+        // 2) ogni tre scoperte propone, senza aspettare lo stallo
+        {
+            var s = new SuggestionScheduler(3, 25f, 3, 60f) { TagPicker = () => "ruvido" };
+            int given = 0;
+            s.OnSuggest += t => given++;
+            s.NotifyDiscovery(); s.NotifyDiscovery();
+            s.Tick(0.1f);
+            Check(given == 0, "due scoperte non bastano");
+            s.NotifyDiscovery();
+            s.Tick(0.1f);
+            Check(given == 1, "la terza scoperta fa scattare la richiesta");
+        }
+
+        // 3) mai sopra una narrazione in corso
+        {
+            var s = new SuggestionScheduler(3, 25f, 3, 60f) { TagPicker = () => "caldo" };
+            int given = 0;
+            s.OnSuggest += t => given++;
+            s.NotifyNarration(true);
+            for (int i = 0; i < 400; i++) s.Tick(0.1f);
+            Check(given == 0, "con la voce che parla non si accavalla");
+            s.NotifyNarration(false);
+            s.Tick(0.1f);
+            Check(given == 1, "appena la voce tace, la richiesta parte");
+        }
+
+        // 4) una sola viva per volta
+        {
+            var s = new SuggestionScheduler(5, 1f, 0, 60f) { TagPicker = () => "caldo" };
+            int given = 0;
+            s.OnSuggest += t => given++;
+            for (int i = 0; i < 300; i++) s.Tick(0.1f);
+            Check(given == 1, "finche' una richiesta e' viva non se ne aggiungono altre");
+            Check(s.HasActive && s.ActiveTag == "caldo", "la richiesta viva e' leggibile da fuori");
+        }
+
+        // 5) scaduto il tempo cade in silenzio
+        {
+            var s = new SuggestionScheduler(5, 1f, 0, 60f) { TagPicker = () => "caldo" };
+            var dropped = new List<string>();
+            s.OnDropped += t => dropped.Add(t);
+            for (int i = 0; i < 800; i++) s.Tick(0.1f);   // 80 s
+            Check(dropped.Count == 1 && dropped[0] == "caldo", "dopo il timeout la richiesta cade");
+            Check(!s.HasActive, "e non resta appesa");
+        }
+
+        // 6) soddisfatta quando si tocca il tag giusto
+        {
+            var s = new SuggestionScheduler(5, 1f, 0, 60f) { TagPicker = () => "caldo" };
+            var met = new List<string>();
+            s.OnMet += t => met.Add(t);
+            for (int i = 0; i < 20; i++) s.Tick(0.1f);
+            s.NotifyTouched("stoffa");
+            Check(met.Count == 0, "un tag diverso non la soddisfa");
+            s.NotifyTouched("caldo");
+            Check(met.Count == 1 && !s.HasActive, "il tag giusto la chiude");
+        }
+
+        // 7) il tetto massimo non si sfonda
+        {
+            var s = new SuggestionScheduler(2, 1f, 0, 5f) { TagPicker = () => "caldo" };
+            int given = 0;
+            s.OnSuggest += t => given++;
+            for (int i = 0; i < 1000; i++) s.Tick(0.1f);
+            Check(given == 2, $"al massimo due richieste in tutto il livello (sono {given})");
+        }
+
+        // 8) se non c'e' niente da proporre, non si propone niente
+        {
+            var s = new SuggestionScheduler(3, 1f, 0, 60f) { TagPicker = () => null };
+            int given = 0;
+            s.OnSuggest += t => given++;
+            for (int i = 0; i < 300; i++) s.Tick(0.1f);
+            Check(given == 0, "TagPicker vuoto: silenzio, non una richiesta senza contenuto");
+        }
+    }
+
     static int Main()
     {
         ThermalGateTests();
+        SuggestionSchedulerTests();
         Console.WriteLine(failures == 0 ? "\nTUTTI I CONTROLLI PASSATI" : $"\n{failures} CONTROLLI FALLITI");
         return failures == 0 ? 0 : 1;
     }
