@@ -26,6 +26,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="../../Assets/Scripts/Exploration/ThermalGate.cs" />
     <Compile Include="../../Assets/Scripts/Exploration/SuggestionScheduler.cs" />
+    <Compile Include="../../Assets/Scripts/Exploration/TableSceneValidator.cs" />
   </ItemGroup>
 
 </Project>

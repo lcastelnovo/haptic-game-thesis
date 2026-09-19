@@ -268,10 +268,66 @@ static class Program
         }
     }
 
+    static SceneObjectInfo Obj(string id, ThermalRole role = ThermalRole.Neutral,
+                               bool discoverable = true, params string[] tags)
+        => new SceneObjectInfo(id, "level3_obj_" + id, role, tags, discoverable);
+
+    static void ValidatorTests()
+    {
+        Console.WriteLine("TableSceneValidator");
+
+        var buona = new List<SceneObjectInfo>
+        {
+            Obj("tovaglietta", ThermalRole.Neutral, false, "stoffa"),
+            Obj("tazza", ThermalRole.Warm, true, "caldo", "liscio"),
+            Obj("cucchiaino", ThermalRole.Cool, true, "freddo", "metallo"),
+            Obj("pane", ThermalRole.Neutral, true, "ruvido"),
+        };
+        var tagBuoni = new List<string> { "caldo", "ruvido" };
+
+        Check(TableSceneValidator.Validate(buona, tagBuoni, 2, out string err), "la colazione valida passa: " + err);
+
+        // lista vuota
+        Check(!TableSceneValidator.Validate(new List<SceneObjectInfo>(), tagBuoni, 2, out _),
+              "una scena senza oggetti va rifiutata");
+
+        // id duplicato
+        var doppio = new List<SceneObjectInfo>(buona) { Obj("tazza", ThermalRole.Neutral, true, "liscio") };
+        Check(!TableSceneValidator.Validate(doppio, tagBuoni, 2, out _), "id duplicato rifiutato");
+
+        // id vuoto
+        var vuoto = new List<SceneObjectInfo>(buona) { Obj("", ThermalRole.Neutral, true, "liscio") };
+        Check(!TableSceneValidator.Validate(vuoto, tagBuoni, 2, out _), "id vuoto rifiutato");
+
+        // battuta mancante
+        var senzaVoce = new List<SceneObjectInfo>(buona)
+            { new SceneObjectInfo("burro", "", ThermalRole.Neutral, new[] { "liscio" }, true) };
+        Check(!TableSceneValidator.Validate(senzaVoce, tagBuoni, 2, out _), "oggetto senza voiceKey rifiutato");
+
+        // troppi oggetti termici: e' il vincolo fisico del Peltier, non un gusto
+        var troppiTermici = new List<SceneObjectInfo>(buona) { Obj("teiera", ThermalRole.Warm, true, "caldo") };
+        Check(!TableSceneValidator.Validate(troppiTermici, tagBuoni, 2, out _),
+              "piu' di due oggetti termici rifiutati");
+
+        // suggerimento che punta a un tag che nessuno ha
+        Check(!TableSceneValidator.Validate(buona, new List<string> { "spugnoso" }, 2, out _),
+              "suggerimento su un tag inesistente rifiutato");
+
+        // suggerimento su un tag che ce l'ha solo un oggetto non scopribile
+        Check(!TableSceneValidator.Validate(buona, new List<string> { "stoffa" }, 2, out _),
+              "suggerimento soddisfacibile solo da uno sfondo rifiutato");
+
+        // nessun oggetto scopribile
+        var soloSfondo = new List<SceneObjectInfo> { Obj("tovaglietta", ThermalRole.Neutral, false, "stoffa") };
+        Check(!TableSceneValidator.Validate(soloSfondo, new List<string>(), 2, out _),
+              "una scena di soli sfondi va rifiutata");
+    }
+
     static int Main()
     {
         ThermalGateTests();
         SuggestionSchedulerTests();
+        ValidatorTests();
         Console.WriteLine(failures == 0 ? "\nTUTTI I CONTROLLI PASSATI" : $"\n{failures} CONTROLLI FALLITI");
         return failures == 0 ? 0 : 1;
     }
