@@ -39,8 +39,8 @@
   "level3_obj_cucchiaino": "Cucchiaino.",
   "level3_obj_pane": "Una fetta di pane.",
   "level3_obj_bicchiere": "Bicchiere.",
-  "level3_warm": "È calda.",
-  "level3_cool": "È fredda.",
+  "level3_warm": "Questa cosa è calda.",
+  "level3_cool": "Questa cosa è fredda.",
   "level3_hint_caldo": "Se ti va, prova a trovare qualcosa di caldo.",
   "level3_hint_caldo_ok": "Ecco, questa è la cosa calda.",
   "level3_hint_ruvido": "Se ti va, cerca la cosa più ruvida del tavolo.",
@@ -57,6 +57,6 @@
   "level3_missing_4": "Mancano ancora quattro cose.",
   "level3_missing_5": "Mancano ancora cinque cose.",
   "level3_missing_6": "Mancano ancora sei cose.",
-  "level3_all_found": "Hai trovato tutta la colazione. Se vuoi puoi continuare a esplorare, oppure dire: ho finito.",
-  "level3_end_hint": "Il livello è finito. Premi N, oppure dì: menu, per tornare al menu principale."
+  "level3_all_found": "Hai trovato tutta la colazione. Se vuoi puoi continuare a esplorare, oppure dì: ho finito.",
+  "level3_end_hint": "Il livello è finito. Dì: menu, oppure premi N, per tornare al menu principale."
 }
