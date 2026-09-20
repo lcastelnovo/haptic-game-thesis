@@ -7,6 +7,7 @@ using HapticResearch.Experiment;
 using HapticResearch.Labyrinth;
 using HapticResearch.Levels;
 using HapticResearch.UI;
+using HapticResearch.Voice;
 
 namespace HapticResearch.Exploration
 {
@@ -80,6 +81,14 @@ namespace HapticResearch.Exploration
         [SerializeField] private KeyCode finishKey = KeyCode.End;
 
         [SerializeField] private bool autoStart = false;
+
+        [Header("Comandi vocali del partecipante")]
+        [Tooltip("Se vuoto lo cerca in scena.")]
+        [SerializeField] private VoiceCommandController voiceCommands;
+
+        [SerializeField] private string[] whatIsThisPhrases = { "cos'e' questo", "che cos'e'", "che cosa e'", "cos'e'" };
+        [SerializeField] private string[] whatIsMissingPhrases = { "cosa manca", "che cosa manca", "quanto manca" };
+        [SerializeField] private string[] finishPhrases = { "ho finito", "basta cosi'", "ho fatto" };
 
         [Header("Logging")]
         [SerializeField] private SessionLogger sessionLogger;
@@ -171,6 +180,15 @@ namespace HapticResearch.Exploration
             if (bindings.Count == 0)
                 bindings.AddRange(FindObjectsByType<SceneObjectBinding>(FindObjectsSortMode.None));
             bindings.RemoveAll(b => b == null);
+
+            if (voiceCommands == null)
+                voiceCommands = FindFirstObjectByType<VoiceCommandController>(FindObjectsInactive.Include);
+            if (voiceCommands != null)
+            {
+                voiceCommands.RegisterCommand(whatIsThisPhrases, SayWhatIsTouched);
+                voiceCommands.RegisterCommand(whatIsMissingPhrases, SayWhatIsMissing);
+                voiceCommands.RegisterCommand(finishPhrases, FinishByVoice);
+            }
         }
 
         protected virtual void Start()
@@ -421,6 +439,46 @@ namespace HapticResearch.Exploration
             if (best == null) return null;
             float threshold = best == touched ? exitRadius : enterRadius;
             return bestDistance <= threshold ? best : null;
+        }
+
+        // I controller vocali segnalano la frase DOPO che l'azione ha deciso: cosi' i
+        // sottotitoli dell'operatore dicono anche che effetto ha avuto.
+        private void SayWhatIsTouched()
+        {
+            if (state != State.Exploring) return;
+
+            if (touched == null || touched.Entry == null)
+            {
+                Voice("level3_nothing_here");
+                VoiceSubtitles.ReportHeard("cos'e' questo", "alta", true, "niente sotto il dito");
+                Log("voice_query", "{\"query\":\"what_is_this\",\"id\":\"\"}");
+                return;
+            }
+
+            Voice(touched.Entry.VoiceKey);
+            lastNamed[touched.Id] = Time.time;
+            if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
+            VoiceSubtitles.ReportHeard("cos'e' questo", "alta", true, touched.Label);
+            Log("voice_query", $"{{\"query\":\"what_is_this\",\"id\":\"{touched.Id}\"}}");
+        }
+
+        // Dice QUANTI ne mancano, mai QUALI: la scoperta resta al partecipante.
+        private void SayWhatIsMissing()
+        {
+            if (state != State.Exploring) return;
+
+            int missing = Mathf.Max(0, TotalDiscoverable - discovered.Count);
+            string key = $"level3_missing_{Mathf.Min(missing, 6)}";
+            Voice(key);
+            VoiceSubtitles.ReportHeard("cosa manca", "alta", true, $"ne mancano {missing}");
+            Log("voice_query", $"{{\"query\":\"what_is_missing\",\"missing\":{missing}}}");
+        }
+
+        private void FinishByVoice()
+        {
+            if (state != State.Exploring) return;
+            VoiceSubtitles.ReportHeard("ho finito", "alta", true, "chiude il livello");
+            Finish("voce");
         }
     }
 }
