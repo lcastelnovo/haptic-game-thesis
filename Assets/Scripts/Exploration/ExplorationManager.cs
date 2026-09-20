@@ -375,6 +375,12 @@ namespace HapticResearch.Exploration
             thermalCue.Tick(dt);
             suggestions.Tick(dt);
 
+            // La traccia si scrive QUI, prima di qualunque uscita anticipata: gira a ogni
+            // frame del livello, anche quando il dito non tocca niente. Quei tratti sono
+            // meta' della mappa (dove la mano ha cercato senza trovare) e in una sandbox
+            // senza accuratezza da misurare la mappa E' il risultato.
+            LogProbeTrace(dt, hit);
+
             if (hit != touched)
             {
                 if (touched != null)
@@ -419,7 +425,14 @@ namespace HapticResearch.Exploration
             if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
             OnObjectNamed?.Invoke(touched);
             suggestions.NotifyTouched(touched);
+        }
 
+        // Campiona la posizione della punta a frequenza fissa. `hit` e' l'oggetto sotto il
+        // dito in QUESTO frame (`touched` sarebbe ancora quello del frame precedente):
+        // quando e' null la riga resta, con id vuoto, ed e' esattamente il dato che dice
+        // dove il partecipante ha cercato a vuoto.
+        private void LogProbeTrace(float dt, SceneObjectBinding hit)
+        {
             if (!logProbeTrace || probeHz <= 0f) return;
             probeAccumulator += dt;
             float period = 1f / probeHz;
@@ -431,7 +444,7 @@ namespace HapticResearch.Exploration
             if (!probes.TryLowestTip(out var tip)) return;
             Log("probe",
                 $"{{\"x\":{F(tip.x, "0.000")},\"z\":{F(tip.z, "0.000")}," +
-                $"\"id\":\"{(touched != null ? touched.Id : "")}\"}}");
+                $"\"id\":\"{(hit != null ? hit.Id : "")}\"}}");
         }
 
         // L'oggetto piu' vicino alla punta dell'indice, con isteresi fra entrata e uscita.
