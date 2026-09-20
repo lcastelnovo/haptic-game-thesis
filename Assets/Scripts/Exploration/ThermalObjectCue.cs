@@ -3,6 +3,7 @@ using UnityEngine;
 using WeArt.Components;
 using WeArt.Core;
 using WeArt.Messages;
+using HapticResearch.Labyrinth;   // HapticProfile: la taratura del partecipante e' del Level 2
 
 namespace HapticResearch.Exploration
 {
