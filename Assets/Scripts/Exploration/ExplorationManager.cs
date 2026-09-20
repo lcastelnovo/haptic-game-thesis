@@ -34,6 +34,10 @@ namespace HapticResearch.Exploration
         [Tooltip("Taratura del partecipante. Se vuoto si usano i valori di default del profilo.")]
         [SerializeField] private HapticProfile profile;
 
+        [Header("Canale termico")]
+        [Tooltip("Se vuoto viene aggiunto a questo GameObject.")]
+        [SerializeField] private ThermalObjectCue thermalCue;
+
         [Header("Oggetti in scena")]
         [Tooltip("Se vuota si riempie da sola con tutti i SceneObjectBinding della scena.")]
         [SerializeField] private List<SceneObjectBinding> bindings = new List<SceneObjectBinding>();
@@ -147,6 +151,14 @@ namespace HapticResearch.Exploration
 
             probes = new FingerProbeSource();
 
+            if (thermalCue == null) thermalCue = GetComponent<ThermalObjectCue>();
+            if (thermalCue == null) thermalCue = gameObject.AddComponent<ThermalObjectCue>();
+            thermalCue.Configure(profile);
+            thermalCue.OnArmed += HandleThermalArmed;
+            thermalCue.OnDelivered += HandleThermalDelivered;
+            thermalCue.OnReleased += HandleThermalReleased;
+            thermalCue.OnSuppressed += HandleThermalSuppressed;
+
             if (bindings.Count == 0)
                 bindings.AddRange(FindObjectsByType<SceneObjectBinding>(FindObjectsSortMode.None));
             bindings.RemoveAll(b => b == null);
@@ -218,7 +230,38 @@ namespace HapticResearch.Exploration
         }
 
         // Riempito dal Task 9: alla chiusura il canale termico torna neutro.
-        private void OnFinished() { }
+        private void OnFinished()
+        {
+            thermalCue?.ResetChannel();
+        }
+
+        private void HandleThermalArmed(string id, ThermalRole role)
+        {
+            Log("thermal_armed", $"{{\"id\":\"{id}\",\"role\":\"{role.ToString().ToLowerInvariant()}\"}}");
+        }
+
+        // "e' calda" arriva SOLO quando la temperatura e' stata davvero erogata: se il
+        // Peltier non ce l'ha fatta, il partecipante non deve sentirsi affermare una
+        // sensazione che non sta provando.
+        private void HandleThermalDelivered(string id, ThermalRole role)
+        {
+            Voice(role == ThermalRole.Warm ? "level3_warm" : "level3_cool");
+            Log("thermal_delivered", $"{{\"id\":\"{id}\",\"role\":\"{role.ToString().ToLowerInvariant()}\"}}");
+        }
+
+        private void HandleThermalReleased(string id, float held, bool delivered)
+        {
+            Log("thermal_released",
+                $"{{\"id\":\"{id}\",\"seconds\":{F(held)},\"delivered\":{(delivered ? "true" : "false")}}}");
+        }
+
+        // Il caso "hai toccato il cucchiaino un secondo dopo la tazza e non hai sentito
+        // niente". Senza questa riga, in analisi resta un partecipante che sembra non aver
+        // percepito il freddo, e non si sapra' mai che il freddo non gli e' stato mandato.
+        private void HandleThermalSuppressed(string id, string reason)
+        {
+            Log("thermal_suppressed", $"{{\"id\":\"{id}\",\"reason\":\"{reason}\"}}");
+        }
 
         protected virtual void Update()
         {
@@ -281,6 +324,10 @@ namespace HapticResearch.Exploration
         {
             probes.Refresh();
             var hit = ResolveTouched();
+
+            thermalCue.SetTarget(hit != null ? hit.Id : null,
+                                 hit != null ? hit.Role : ThermalRole.Neutral);
+            thermalCue.Tick(dt);
 
             if (hit != touched)
             {
