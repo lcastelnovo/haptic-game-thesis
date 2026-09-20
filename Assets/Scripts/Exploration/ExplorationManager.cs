@@ -67,6 +67,11 @@ namespace HapticResearch.Exploration
 
         [SerializeField, Range(0f, 1f)] private float sfxVolume = 1f;
 
+        [Header("Richieste facoltative")]
+        [SerializeField] private ExplorationSuggestions suggestions;
+        [Tooltip("Tono della richiesta: Assets/Audio/Level3/suggestion_tone.")]
+        [SerializeField] private AudioClip suggestionToneClip;
+
         [Header("Controlli operatore")]
         [SerializeField] private KeyCode startKey = KeyCode.Return;
         [SerializeField] private KeyCode repeatKey = KeyCode.R;
@@ -159,6 +164,10 @@ namespace HapticResearch.Exploration
             thermalCue.OnReleased += HandleThermalReleased;
             thermalCue.OnSuppressed += HandleThermalSuppressed;
 
+            if (suggestions == null) suggestions = GetComponent<ExplorationSuggestions>();
+            if (suggestions == null) suggestions = gameObject.AddComponent<ExplorationSuggestions>();
+            suggestions.Configure(this, scene, suggestionToneClip);
+
             if (bindings.Count == 0)
                 bindings.AddRange(FindObjectsByType<SceneObjectBinding>(FindObjectsSortMode.None));
             bindings.RemoveAll(b => b == null);
@@ -201,6 +210,7 @@ namespace HapticResearch.Exploration
             touched = null;
             namedThisVisit = false;
             lastNamed.Clear();
+            suggestions.ResetAll();
             TouchedLabel = null;
             state = State.Exploring;
             levelStartTime = Time.time;
@@ -286,6 +296,7 @@ namespace HapticResearch.Exploration
             Log("discovery",
                 $"{{\"id\":\"{id}\",\"order\":{discovered.Count},\"seconds\":{F(ElapsedSeconds)}}}");
             if (discovered.Count >= TotalDiscoverable) VoiceQueued("level3_all_found");
+            suggestions.NotifyDiscovery();
             return true;
         }
 
@@ -295,6 +306,8 @@ namespace HapticResearch.Exploration
         {
             if (clip != null && sfxSource != null) sfxSource.PlayOneShot(clip, sfxVolume);
         }
+
+        public void PlaySuggestionTone(AudioClip clip) => PlaySfx(clip);
 
         // Battuta pre-generata per chiave. Se manca, lo dice invece di tacere: una voce
         // assente in un gioco per non vedenti e' un pezzo di interfaccia assente.
@@ -334,6 +347,7 @@ namespace HapticResearch.Exploration
             thermalCue.SetTarget(hit != null ? hit.Id : null,
                                  hit != null ? hit.Role : ThermalRole.Neutral);
             thermalCue.Tick(dt);
+            suggestions.Tick(dt);
 
             if (hit != touched)
             {
@@ -378,6 +392,7 @@ namespace HapticResearch.Exploration
 
             if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
             OnObjectNamed?.Invoke(touched);
+            suggestions.NotifyTouched(touched);
         }
 
         // L'oggetto piu' vicino alla punta dell'indice, con isteresi fra entrata e uscita.
