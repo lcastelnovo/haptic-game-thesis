@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
@@ -37,6 +38,22 @@ namespace HapticResearch.Exploration
         [Tooltip("Se vuota si riempie da sola con tutti i SceneObjectBinding della scena.")]
         [SerializeField] private List<SceneObjectBinding> bindings = new List<SceneObjectBinding>();
 
+        [Header("Rilevamento (piano del tavolo)")]
+        [Tooltip("Distanza dito-oggetto sotto la quale si considera un contatto. Stesso ordine di grandezza del touchDistance dei segmenti di dito.")]
+        [SerializeField] private float enterRadius = 0.03f;
+
+        [Tooltip("Piu' larga di enterRadius: il contatto si perde solo uscendo davvero. Senza questa isteresi il dito sul bordo entrerebbe e uscirebbe decine di volte al secondo.")]
+        [SerializeField] private float exitRadius = 0.045f;
+
+        [Tooltip("Sopra questa altezza la mano e' sollevata dal tavolo e non tocca niente.")]
+        [SerializeField] private float maxTipHeight = 0.97f;
+
+        [Tooltip("Quanto il dito deve restare SULL'OGGETTO prima che la voce lo nomini. Non immobilita': seguire il bordo non azzera il conteggio.")]
+        [SerializeField] private float nameDwellSeconds = 1.0f;
+
+        [Tooltip("Un oggetto gia' nominato non si ripete prima di questo tempo.")]
+        [SerializeField] private float nameCooldownSeconds = 15f;
+
         [Header("Suoni")]
         [Tooltip("Colpetto di contatto: si riusa quello del Level 2 (Assets/Audio/Level2/wall_bump).")]
         [SerializeField] private AudioClip contactClip;
@@ -64,6 +81,12 @@ namespace HapticResearch.Exploration
         private readonly HashSet<string> discovered = new HashSet<string>();
         private AudioSource sfxSource;
 
+        private FingerProbeSource probes;
+        private SceneObjectBinding touched;
+        private float touchedSince;
+        private bool namedThisVisit;
+        private readonly Dictionary<string, float> lastNamed = new Dictionary<string, float>();
+
         public TableSceneAsset Scene => scene;
         public HapticProfile Profile => profile;
         public int DiscoveredCount => discovered.Count;
@@ -71,6 +94,12 @@ namespace HapticResearch.Exploration
 
         // Etichetta dell'oggetto sotto il dito, per l'HUD. Riempita dal Task 8.
         public string TouchedLabel { get; protected set; }
+
+        public SceneObjectBinding TouchedBinding => touched;
+
+        // Il dito e' entrato su un oggetto diverso / la voce lo ha nominato.
+        public event Action<SceneObjectBinding> OnTouchChanged;
+        public event Action<SceneObjectBinding> OnObjectNamed;
 
         public override string LevelId => levelId;
         public override int LevelNumber => levelNumber;
@@ -116,6 +145,8 @@ namespace HapticResearch.Exploration
             sfxSource.spatialBlend = 0f;   // 2D: si sente sempre
             sfxSource.playOnAwake = false;
 
+            probes = new FingerProbeSource();
+
             if (bindings.Count == 0)
                 bindings.AddRange(FindObjectsByType<SceneObjectBinding>(FindObjectsSortMode.None));
             bindings.RemoveAll(b => b == null);
@@ -148,6 +179,10 @@ namespace HapticResearch.Exploration
             }
 
             discovered.Clear();
+            probes.Invalidate();
+            touched = null;
+            namedThisVisit = false;
+            lastNamed.Clear();
             TouchedLabel = null;
             state = State.Exploring;
             levelStartTime = Time.time;
@@ -190,6 +225,9 @@ namespace HapticResearch.Exploration
             if (Input.GetKeyDown(startKey) && state != State.Exploring) StartLevel();
             if (Input.GetKeyDown(repeatKey)) RepeatAnnouncement();
             if (Input.GetKeyDown(finishKey)) Finish("operatore");
+
+            if (state == State.Exploring)
+                UpdateTouch(Time.deltaTime);
         }
 
         protected bool MarkDiscovered(string id)
@@ -237,6 +275,84 @@ namespace HapticResearch.Exploration
         {
             if (sessionLogger == null) sessionLogger = SessionLogger.Instance;
             sessionLogger?.Log(levelId, eventType, json);
+        }
+
+        private void UpdateTouch(float dt)
+        {
+            probes.Refresh();
+            var hit = ResolveTouched();
+
+            if (hit != touched)
+            {
+                if (touched != null)
+                    Log("object_exit",
+                        $"{{\"id\":\"{touched.Id}\",\"seconds\":{F(Time.time - touchedSince)}}}");
+
+                touched = hit;
+                touchedSince = Time.time;
+                namedThisVisit = false;
+                TouchedLabel = hit != null ? hit.Label : null;
+
+                if (hit != null)
+                {
+                    PlaySfx(contactClip);
+                    Log("object_enter", $"{{\"id\":\"{hit.Id}\"}}");
+                }
+                OnTouchChanged?.Invoke(hit);
+            }
+
+            if (touched == null || namedThisVisit) return;
+            if (Time.time - touchedSince < nameDwellSeconds) return;
+
+            // Il nome NON si accoda: se la voce sta parlando si riprova al frame dopo, e
+            // se intanto il dito se n'e' andato non lo si dice affatto. Una voce che
+            // insegue il dito con due secondi di ritardo, nominando cose che non si stanno
+            // piu' toccando, per chi non vede e' peggio del silenzio.
+            var nm = NarrationManager.Instance;
+            if (nm != null && nm.IsSpeaking) return;
+
+            if (lastNamed.TryGetValue(touched.Id, out float last) &&
+                Time.time - last < nameCooldownSeconds)
+            {
+                namedThisVisit = true;   // gia' nominato da poco: si resta zitti fino alla prossima visita
+                return;
+            }
+
+            namedThisVisit = true;
+            lastNamed[touched.Id] = Time.time;
+            Voice(touched.Entry.VoiceKey);
+            Log("object_named", $"{{\"id\":\"{touched.Id}\"}}");
+
+            if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
+            OnObjectNamed?.Invoke(touched);
+        }
+
+        // L'oggetto piu' vicino alla punta dell'indice, con isteresi fra entrata e uscita.
+        // Nel labirinto la stessa domanda ha una risposta aritmetica (MazeMap.Locate); qui
+        // la geometria e' disegnata a mano e si misura la distanza dai collider. Con sette
+        // oggetti il ciclo costa meno di una query di physics, e funziona identico con le
+        // mani demo e con i tracker.
+        private SceneObjectBinding ResolveTouched()
+        {
+            SceneObjectBinding best = null;
+            float bestDistance = float.PositiveInfinity;
+
+            foreach (var b in bindings)
+            {
+                if (b == null || b.Collider == null || b.Entry == null) continue;
+                foreach (var tip in probes.Tips)
+                {
+                    if (tip.y > maxTipHeight) continue;   // mano sollevata dal tavolo
+                    float d = Vector3.Distance(b.Collider.ClosestPoint(tip), tip);
+                    if (d >= bestDistance) continue;
+                    bestDistance = d;
+                    best = b;
+                }
+            }
+
+            if (best == null) return null;
+            float threshold = best == touched ? exitRadius : enterRadius;
+            return bestDistance <= threshold ? best : null;
         }
     }
 }
