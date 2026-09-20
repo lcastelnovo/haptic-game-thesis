@@ -25,9 +25,9 @@ Niente CI, niente Makefile. Aprire da Unity Hub.
 - Scene template: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/ViveTrackerScene.unity`
   (la `old.unity` è vecchia, da non toccare salvo recupero asset)
 - Scene di gioco (Scene List, in ordine): `MainMenu.unity` → `Level1_ShapeRecognition.unity`
-  → `Labyrinth.unity` (Level 2). Ognuna si cabla con il suo tool editor (menu
+  → `Labyrinth.unity` (Level 2) → `Level3_Breakfast.unity` (Level 3). Ognuna si cabla con il suo tool editor (menu
   `HapticResearch/...`, anche headless con `-executeMethod`): `MenuSceneSetupTool`,
-  `Level1SetupTool`, `LabyrinthSetupTool`. `SceneDumpTool` scrive un dump testuale di
+  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. `SceneDumpTool` scrive un dump testuale di
   una scena (gerarchia, componenti, campi) per confrontarle senza aprire l'editor
 - Build: File → Build Settings → PC Standalone
 - Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
@@ -164,6 +164,7 @@ Apprendimento braille a 3 livelli:
 - `ShapeRecognitionManager` - Level 1: annuncia una forma, il partecipante la afferra e la
   tiene 5 s per confermare; 4 forme in ordine casuale
 - `LabyrinthManager` - Level 2: vedi la sezione **Labirinto** più sotto
+- `ExplorationManager` - Level 3: vedi la sezione **Colazione** più sotto
 - `FingerProbeSource` / `WallContactTracker` / `ProximityBeacon`: pezzi estratti dal
   labirinto ma riusabili da qualunque livello. Punte = `WeArtHapticObject` con
   `ActuationPointFlags.Index`, filtrate su `HandDemoModeController.DemoActive`: demo ON →
@@ -246,9 +247,51 @@ altro valore quello termico (`forcedCondition` sul manager forza la scelta nei t
 `MazeLayoutValidator.cs` veri ed esegue i controlli fuori da Unity: celle che si
 rilocalizzano, blocchi di muro non sovrapposti, area che torna, perimetro chiuso,
 orientamento rispetto al partecipante, e sei layout malformati che devono essere
-rifiutati. È l'unico test automatico del progetto: se tocchi la griglia, rilancialo.
-Attenzione: gira solo su codice **gestito**, niente `Quaternion.Euler` o altre API che
-chiamano il runtime nativo di Unity.
+rifiutati. Se tocchi la griglia, rilancia il test. Gira solo su codice **gestito**, niente
+`Quaternion.Euler` o altre API che chiamano il runtime nativo di Unity.
+
+### Colazione (`Assets/Scripts/Exploration/`) - Level 3
+
+Sandbox di esplorazione libera senza fallimento. Il partecipante scopre gli oggetti sul
+tavolo, tocca le loro superfici, sente caldo o freddo, e se ha voglia smette a voce
+("ho finito") o l'operatore preme **Fine**.
+
+Approccio ibrido: la **geometria sta nella scena** (è arte: una fetta di pane non si genera
+da codice), i **parametri tattili e i testi stanno in `TableSceneAsset`** (`Assets/Settings/Exploration/`)
+che è **il dato dell'esperimento** e si duplica per una variante. Così resta scritto quale
+asset ha giocato chi.
+
+**La temperatura funziona diversamente dal labirinto** perché qui gli oggetti sono sette e
+vicini: il dito rimbalza tra loro più in fretta di quanto l'attuatore Peltier sappia seguire.
+Nel labirinto la lettura è una scelta a sosta; qui è una proprietà dell'oggetto, e il canale
+si comporta così:
+
+- un solo oggetto armato per volta;
+- si arma **all'ingresso** sull'oggetto, non dopo una sosta: l'attuatore così scalda mentre
+  il dito ne segue il contorno;
+- una volta armato si tiene per almeno **3 s** (`minHoldSeconds`), anche se il dito se n'è
+  andato subito: sotto quella soglia il Peltier non ha ancora raggiunto il valore;
+- all'uscita c'è una grazia di **0,4 s** (`releaseGraceSeconds`) prima di lasciar andare:
+  un tremolio della mano non deve spegnere niente;
+- finché il minimo non è scaduto, un secondo oggetto termico **non commuta**: tace, e lo scrive
+  nel log come `thermal_suppressed`. Meglio nessuna informazione che un tepore ambiguo, che il
+  partecipante leggerebbe come un dato quando è solo un attuatore a metà strada. Quella riga di
+  log serve in analisi: senza, resterebbe un partecipante che sembra non aver percepito il freddo,
+  e non si saprebbe mai che il freddo non gli è stato mandato.
+
+L'isteresi termica e il comportamento dello scheduler si verificano con `cd Tools/ExplorationTest && dotnet run`.
+
+Per questo motivo, "questa cosa è calda" o "fredda" si **dice solo se la temperatura è
+davvero stata erogata in precedenza al dito** — non per ipotesi, non per il nome
+dell'oggetto. Senza middleware la sensazione termica non arriva, ma il livello resta
+giocabile: il partecipante scopre comunque forma, texture e stiffness.
+
+I **suoni di contatto e scoperta sono riusati dal Level 2 di proposito**: il partecipante
+non impara due vocabolari sonori per le stesse cose.
+
+La **taratura termica del partecipante** (soglia di percezione, range warm/cool) si
+eredita da `HapticProfile` del Level 2 invece di rifarla: il livello precedente ha già
+calibrato il giocatore.
 
 ### Grid & Objects
 - `BuildGrid` (`Assets/Scripts/Grid/`): snap grid 13×8, cell size 0.075m, niente overlap
@@ -350,7 +393,8 @@ da container, niente collider/rigidbody sul parent.
 | F2 | Mostra / nasconde sottotitoli voce (giocatore / narratore) |
 | F3 | Mostra / nasconde HUD operatore |
 | Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
-| N | Livello successivo (Level 1) o torna al menu (Level 2), solo a livello completato |
+| N | Livello successivo (Level 1 e Level 2) o torna al menu (Level 3), solo a livello completato |
+| Fine | Chiude il livello 3 (l'esplorazione non finisce da sola) |
 | M | Muta / riattiva il microfono |
 | K | Avvia la taratura termica (Level 2), Esc la interrompe |
 | C / F | Risposta "caldo" / "freddo" in taratura, se il microfono non c'è |
