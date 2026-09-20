@@ -3,7 +3,6 @@ using UnityEngine;
 using WeArt.Components;
 using WeArt.Core;
 using WeArt.Messages;
-using HapticResearch.Exploration;
 
 namespace HapticResearch.Exploration
 {
@@ -39,21 +38,46 @@ namespace HapticResearch.Exploration
 
         public void Configure(HapticProfile hapticProfile)
         {
-            profile = hapticProfile;
+            // Se il gate e' gia' istanziato (seconda chiamata a Configure), riportiamo a neutro
+            // un eventuale armamento orfano e disiscritti gli handler vecchi.
+            if (gate != null)
+            {
+                ResetChannel();
+                gate.OnArm -= HandleGateArmed;
+                gate.OnRelease -= HandleGateReleased;
+                gate.OnDelivered -= HandleGateDelivered;
+                gate.OnSuppressed -= HandleGateSuppressed;
+            }
 
+            profile = hapticProfile;
             gate = new ThermalGate(minHoldSeconds, releaseGraceSeconds);
-            gate.OnArm += (id, role) =>
-            {
-                SendTemperature(role == ThermalRole.Warm ? profile.WarmValue : profile.ColdValue);
-                OnArmed?.Invoke(id, role);
-            };
-            gate.OnRelease += (id, held, delivered) =>
-            {
-                SendTemperature(profile.NeutralValue);
-                OnReleased?.Invoke(id, held, delivered);
-            };
-            gate.OnDelivered += (id, role) => OnDelivered?.Invoke(id, role);
-            gate.OnSuppressed += (id, reason) => OnSuppressed?.Invoke(id, reason);
+            gate.OnArm += HandleGateArmed;
+            gate.OnRelease += HandleGateReleased;
+            gate.OnDelivered += HandleGateDelivered;
+            gate.OnSuppressed += HandleGateSuppressed;
+        }
+
+        private void HandleGateArmed(string id, ThermalRole role)
+        {
+            SendTemperature(profile != null && role == ThermalRole.Warm ? profile.WarmValue :
+                           (profile != null ? profile.ColdValue : 0f));
+            OnArmed?.Invoke(id, role);
+        }
+
+        private void HandleGateReleased(string id, float held, bool delivered)
+        {
+            SendTemperature(profile != null ? profile.NeutralValue : 0f);
+            OnReleased?.Invoke(id, held, delivered);
+        }
+
+        private void HandleGateDelivered(string id, ThermalRole role)
+        {
+            OnDelivered?.Invoke(id, role);
+        }
+
+        private void HandleGateSuppressed(string id, string reason)
+        {
+            OnSuppressed?.Invoke(id, reason);
         }
 
         public void SetTarget(string id, ThermalRole role) => gate?.SetTarget(id, role);

@@ -171,6 +171,12 @@ namespace HapticResearch.Exploration
 
         public override void StartLevel()
         {
+            // Riporta il canale termico a neutro se il gesto "nuovo partecipante" (Invio) lo
+            // chiama mentre un oggetto era ancora armato. Nessuno in sala potrebbe notare che
+            // il guanto e' ancora caldo: il livello a schermo e' ripartito pulito, ma l'attuatore
+            // no. Questa riga garantisce che ogni partecipante riceva un guanto freddo.
+            thermalCue?.ResetChannel();
+
             if (scene == null)
             {
                 Debug.LogError("[Level3] Manca la TableSceneAsset: impossibile avviare.");
