@@ -251,9 +251,14 @@ namespace HapticResearch.Exploration
             levelEndTime = -1f;
 
             Voice("level3_intro");
+            // Il profilo finisce nel log per nome E per valori: il Level 3 eredita la
+            // taratura termica fatta nel Level 2, e a distanza di mesi deve restare
+            // scritto che era la stessa, non una rifatta o quella di default.
             Log("level_start",
                 $"{{\"scene\":\"{scene.SceneId}\",\"objects\":{bound},\"discoverable\":{TotalDiscoverable}," +
-                $"\"hand\":\"{profile.ActuatedHandName()}\"}}");
+                $"\"hand\":\"{profile.ActuatedHandName()}\",\"profile\":\"{ProfileName()}\"," +
+                $"\"warm\":{F(profile.WarmValue)},\"cold\":{F(profile.ColdValue)}," +
+                $"\"neutral\":{F(profile.NeutralValue)}}}");
         }
 
         public override void RepeatAnnouncement()
@@ -273,6 +278,7 @@ namespace HapticResearch.Exploration
             state = State.Finished;
             levelEndTime = Time.time;
             OnFinished();
+            suggestions.DropActiveOnFinish();   // prima di level_end: l'invito ancora vivo ha un esito
             Voice("level3_end_hint");
             Log("level_end",
                 $"{{\"discovered\":{discovered.Count},\"total\":{TotalDiscoverable}," +
@@ -340,6 +346,11 @@ namespace HapticResearch.Exploration
         }
 
         public bool IsDiscovered(string id) => discovered.Contains(id);
+
+        // Un profilo creato a runtime (nessun asset assegnato) non ha nome: nel log deve
+        // vedersi che erano i valori di default, non un asset tarato.
+        private string ProfileName() =>
+            profile == null || string.IsNullOrEmpty(profile.name) ? "default" : profile.name;
 
         protected void PlaySfx(AudioClip clip)
         {

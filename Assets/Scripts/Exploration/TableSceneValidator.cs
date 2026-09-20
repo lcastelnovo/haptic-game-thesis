@@ -43,14 +43,18 @@ namespace HapticResearch.Exploration
 
             var ids = new HashSet<string>();
             var discoverableTags = new HashSet<string>();
-            int thermal = 0;
+            var thermalIds = new List<string>();
             int discoverable = 0;
 
-            foreach (var o in objects)
+            for (int i = 0; i < objects.Count; i++)
             {
+                var o = objects[i];
                 if (string.IsNullOrWhiteSpace(o.Id))
                 {
-                    error = "c'e' un oggetto senza id";
+                    // L'indice e' l'unico appiglio che ha chi sta compilando sette righe
+                    // nell'Inspector: senza, "c'e' un oggetto senza id" costringe a
+                    // ricontrollarle tutte.
+                    error = $"l'oggetto in posizione {i + 1} non ha un id";
                     return false;
                 }
                 if (!ids.Add(o.Id))
@@ -63,7 +67,7 @@ namespace HapticResearch.Exploration
                     error = $"l'oggetto '{o.Id}' non ha una chiave vocale: resterebbe senza nome";
                     return false;
                 }
-                if (o.Role != ThermalRole.Neutral) thermal++;
+                if (o.Role != ThermalRole.Neutral) thermalIds.Add(o.Id);
                 if (!o.Discoverable) continue;
 
                 discoverable++;
@@ -79,10 +83,10 @@ namespace HapticResearch.Exploration
 
             // Il tetto non e' un gusto: e' il tempo di salita del Peltier. Con tre o piu'
             // oggetti termici vicini, il canale passa la sessione a rincorrere il dito.
-            if (thermal > maxThermal)
+            if (thermalIds.Count > maxThermal)
             {
-                error = $"{thermal} oggetti termici, il massimo e' {maxThermal}: " +
-                        "l'attuatore non fa in tempo a raggiungerli tutti";
+                error = $"{thermalIds.Count} oggetti termici ({string.Join(", ", thermalIds)}), " +
+                        $"il massimo e' {maxThermal}: l'attuatore non fa in tempo a raggiungerli tutti";
                 return false;
             }
 

@@ -330,9 +330,12 @@ static class Program
         var doppio = new List<SceneObjectInfo>(buona) { Obj("tazza", ThermalRole.Neutral, true, "liscio") };
         Check(!TableSceneValidator.Validate(doppio, tagBuoni, 2, out _), "id duplicato rifiutato");
 
-        // id vuoto
+        // id vuoto: il messaggio deve dire QUALE riga, altrimenti chi sta compilando
+        // l'Inspector le deve ricontrollare tutte a occhio
         var vuoto = new List<SceneObjectInfo>(buona) { Obj("", ThermalRole.Neutral, true, "liscio") };
-        Check(!TableSceneValidator.Validate(vuoto, tagBuoni, 2, out _), "id vuoto rifiutato");
+        Check(!TableSceneValidator.Validate(vuoto, tagBuoni, 2, out string errVuoto), "id vuoto rifiutato");
+        Check(errVuoto != null && errVuoto.Contains("5"),
+              $"il messaggio dice la posizione dell'oggetto senza id (e' \"{errVuoto}\")");
 
         // battuta mancante
         var senzaVoce = new List<SceneObjectInfo>(buona)
@@ -341,8 +344,11 @@ static class Program
 
         // troppi oggetti termici: e' il vincolo fisico del Peltier, non un gusto
         var troppiTermici = new List<SceneObjectInfo>(buona) { Obj("teiera", ThermalRole.Warm, true, "caldo") };
-        Check(!TableSceneValidator.Validate(troppiTermici, tagBuoni, 2, out _),
+        Check(!TableSceneValidator.Validate(troppiTermici, tagBuoni, 2, out string errTermici),
               "piu' di due oggetti termici rifiutati");
+        Check(errTermici != null && errTermici.Contains("tazza") && errTermici.Contains("cucchiaino") &&
+              errTermici.Contains("teiera"),
+              $"il messaggio elenca gli oggetti termici (e' \"{errTermici}\")");
 
         // suggerimento che punta a un tag che nessuno ha
         Check(!TableSceneValidator.Validate(buona, new List<string> { "spugnoso" }, 2, out _),

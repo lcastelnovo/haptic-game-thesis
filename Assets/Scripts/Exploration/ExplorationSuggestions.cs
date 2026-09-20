@@ -26,6 +26,11 @@ namespace HapticResearch.Exploration
         private SuggestionScheduler scheduler;
         private readonly HashSet<string> usedTags = new HashSet<string>();
 
+        // Da quanto e' viva la richiesta e chi l'ha soddisfatta: senza, in analisi resta
+        // un tag senza sapere quale oggetto ha chiuso l'invito ne' quanto ci e' voluto.
+        private float activeElapsed;
+        private string metById;
+
         public bool HasActive => scheduler != null && scheduler.HasActive;
         public string ActiveTag => scheduler != null ? scheduler.ActiveTag : null;
 
@@ -35,6 +40,16 @@ namespace HapticResearch.Exploration
             scene = tableScene;
             tone = suggestionTone;
 
+            // Idempotente come ThermalObjectCue.Configure: Configure e' pubblico e un tool
+            // di cablaggio potrebbe richiamarlo. Senza disiscrivere, lo scheduler vecchio
+            // resterebbe agganciato ai nostri handler e ogni evento verrebbe loggato due volte.
+            if (scheduler != null)
+            {
+                scheduler.OnSuggest -= HandleSuggest;
+                scheduler.OnMet -= HandleMet;
+                scheduler.OnDropped -= HandleDropped;
+            }
+
             scheduler = new SuggestionScheduler(maxSuggestions, idleSeconds, everyNDiscoveries, timeoutSeconds)
             {
                 TagPicker = () => scene != null ? scene.PickSuggestionTag(t => usedTags.Contains(t)) : null,
@@ -42,20 +57,34 @@ namespace HapticResearch.Exploration
             scheduler.OnSuggest += HandleSuggest;
             scheduler.OnMet += HandleMet;
             scheduler.OnDropped += HandleDropped;
+            activeElapsed = 0f;
+            metById = null;
         }
 
         public void ResetAll()
         {
             usedTags.Clear();
             scheduler?.Reset();
+            activeElapsed = 0f;
+            metById = null;
         }
 
         public void Tick(float dt)
         {
             if (scheduler == null) return;
+            if (scheduler.HasActive) activeElapsed += dt;   // prima del Tick: la caduta lo legge
             var nm = NarrationManager.Instance;
             scheduler.NotifyNarration(nm != null && nm.IsSpeaking);
             scheduler.Tick(dt);
+        }
+
+        // Il livello si chiude con una richiesta ancora viva. Non e' un fallimento del
+        // partecipante (era un invito), ma senza questa riga in analisi resterebbe un
+        // suggestion_given senza esito, indistinguibile da un buco nel log.
+        public void DropActiveOnFinish()
+        {
+            if (scheduler == null || !scheduler.HasActive) return;
+            LogOutcome("suggestion_dropped", scheduler.ActiveTag, null, "fine_livello");
         }
 
         public void NotifyDiscovery() => scheduler?.NotifyDiscovery();
@@ -65,8 +94,11 @@ namespace HapticResearch.Exploration
         {
             if (scheduler == null || binding == null || binding.Entry == null) return;
             if (!scheduler.HasActive) return;
-            if (binding.Entry.HasTag(scheduler.ActiveTag))
-                scheduler.NotifyTouched(scheduler.ActiveTag);
+            if (!binding.Entry.HasTag(scheduler.ActiveTag)) return;
+
+            metById = binding.Id;   // letto da HandleMet, che dallo scheduler riceve solo il tag
+            scheduler.NotifyTouched(scheduler.ActiveTag);
+            metById = null;
         }
 
         private void HandleSuggest(string tag)
@@ -77,7 +109,8 @@ namespace HapticResearch.Exploration
                 if (tone != null) manager.PlaySuggestionTone(tone);
                 manager.Voice(entry.VoiceKey);
             }
-            manager.Log("suggestion_given", $"{{\"tag\":\"{tag}\"}}");
+            activeElapsed = 0f;
+            LogOutcome("suggestion_given", tag, null, null);
         }
 
         private void HandleMet(string tag)
@@ -89,10 +122,20 @@ namespace HapticResearch.Exploration
             if (scene != null && scene.TryGetSuggestion(tag, out var entry) &&
                 !string.IsNullOrEmpty(entry.MetVoiceKey))
                 manager.VoiceQueued(entry.MetVoiceKey);
-            manager.Log("suggestion_met", $"{{\"tag\":\"{tag}\"}}");
+            LogOutcome("suggestion_met", tag, metById, null);
         }
 
         // Cade in SILENZIO: nessuna voce, nessun suono. Ignorare un invito non e' sbagliare.
-        private void HandleDropped(string tag) => manager.Log("suggestion_dropped", $"{{\"tag\":\"{tag}\"}}");
+        private void HandleDropped(string tag) => LogOutcome("suggestion_dropped", tag, null, "timeout");
+
+        // Tag, oggetto che ha soddisfatto la richiesta e millisecondi da quando e' partita:
+        // e' quello che la spec chiede di poter leggere in analisi.
+        private void LogOutcome(string eventType, string tag, string id, string reason)
+        {
+            int ms = Mathf.RoundToInt(activeElapsed * 1000f);
+            string json = $"{{\"tag\":\"{tag}\",\"id\":\"{id ?? string.Empty}\",\"ms\":{ms}";
+            if (!string.IsNullOrEmpty(reason)) json += $",\"reason\":\"{reason}\"";
+            manager.Log(eventType, json + "}");
+        }
     }
 }
