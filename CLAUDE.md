@@ -279,8 +279,6 @@ si comporta così:
   log serve in analisi: senza, resterebbe un partecipante che sembra non aver percepito il freddo,
   e non si saprebbe mai che il freddo non gli è stato mandato.
 
-L'isteresi termica e il comportamento dello scheduler si verificano con `cd Tools/ExplorationTest && dotnet run`.
-
 Per questo motivo, "questa cosa è calda" o "fredda" si **dice solo se la temperatura è
 davvero stata erogata in precedenza al dito** — non per ipotesi, non per il nome
 dell'oggetto. Senza middleware la sensazione termica non arriva, ma il livello resta
@@ -289,9 +287,23 @@ giocabile: il partecipante scopre comunque forma, texture e stiffness.
 I **suoni di contatto e scoperta sono riusati dal Level 2 di proposito**: il partecipante
 non impara due vocabolari sonori per le stesse cose.
 
+Sugli oggetti della colazione il campo `Temperature` del `WeArtTouchableObject` va lasciato
+**spento**, contro la checklist generale più sotto: la temperatura passa solo dal messaggio
+diretto di `ThermalObjectCue`, e il campo del SDK scavalcherebbe in silenzio isteresi,
+minimo di tenuta e soppressione. `HapticResearch/Level 3/Valida oggetti` lo controlla.
+
 La **taratura termica del partecipante** (soglia di percezione, range warm/cool) si
 eredita da `HapticProfile` del Level 2 invece di rifarla: il livello precedente ha già
-calibrato il giocatore.
+calibrato il giocatore. Lo stesso profilo decide **quale mano** si attua, e il
+rilevamento del contatto guarda solo quella: con entrambe, una mano appoggiata ferma sul
+tavolo vincerebbe ogni confronto di distanza e la mano che esplora diventerebbe invisibile.
+
+**Comandi vocali del partecipante** (l'operatore deve conoscerli per condurre la sessione):
+«cos'è questo» dice cosa c'è sotto il dito, «cosa manca» dice *quanti* oggetti restano (mai
+quali), «ho finito» chiude il livello — lo stesso del tasto **Fine** dell'operatore.
+
+L'isteresi termica, il comportamento dello scheduler delle richieste e i controlli sul dato
+di scena si verificano con `cd Tools/ExplorationTest && dotnet run`.
 
 ### Grid & Objects
 - `BuildGrid` (`Assets/Scripts/Grid/`): snap grid 13×8, cell size 0.075m, niente overlap
@@ -367,7 +379,10 @@ nella scena come riferimento):
 - `Mass = 1`, `Angular Drag = 0.05` (default)
 
 **`WeArtTouchableObject`**
-- Spuntare `Stiffness` / `Texture` / `Temperature` secondo la sensazione desiderata
+- Spuntare `Stiffness` / `Texture` / `Temperature` secondo la sensazione desiderata.
+  **Eccezione Level 3**: lì `Temperature` va lasciato SPENTO, la temperatura la comanda
+  `ThermalObjectCue` (`SceneObjectBinding.Bind` lo spegne comunque e
+  `HapticResearch/Level 3/Valida oggetti` segnala chi lo riaccende)
 - `Disable Dynamic Force` ON: senza questo la forza viene applicata in modo sbagliato
   sulle dita
 - `Graspable` ON solo se l'oggetto deve essere afferrabile
