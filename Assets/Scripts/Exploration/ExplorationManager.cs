@@ -424,7 +424,10 @@ namespace HapticResearch.Exploration
             probeAccumulator += dt;
             float period = 1f / probeHz;
             if (probeAccumulator < period) return;
-            probeAccumulator = 0f;
+            // Sottrai il periodo invece di azzerare: così il residuo rimane nell'accumulatore
+            // e la frequenza media rimane nominale a qualunque frame rate. Con azzeramento,
+            // la frequenza effettiva variava (4% in meno a 144 fps rispetto a 60 fps).
+            probeAccumulator -= period;
             if (!probes.TryLowestTip(out var tip)) return;
             Log("probe",
                 $"{{\"x\":{F(tip.x, "0.000")},\"z\":{F(tip.z, "0.000")}," +
