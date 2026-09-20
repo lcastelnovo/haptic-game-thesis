@@ -82,9 +82,13 @@ namespace HapticResearch.Exploration
 
         private void HandleMet(string tag)
         {
+            // Si ACCODA: la richiesta si soddisfa nello stesso frame in cui la voce
+            // comincia a dire il nome dell'oggetto, e con Voice() la conferma lo
+            // troncherebbe (Speak svuota la coda e ferma la sorgente). Se quella era
+            // anche l'ultima scoperta, cancellerebbe pure "hai trovato tutta la colazione".
             if (scene != null && scene.TryGetSuggestion(tag, out var entry) &&
                 !string.IsNullOrEmpty(entry.MetVoiceKey))
-                manager.Voice(entry.MetVoiceKey);
+                manager.VoiceQueued(entry.MetVoiceKey);
             manager.Log("suggestion_met", $"{{\"tag\":\"{tag}\"}}");
         }
 

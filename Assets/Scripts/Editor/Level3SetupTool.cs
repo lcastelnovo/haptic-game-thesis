@@ -448,7 +448,11 @@ namespace HapticResearch.EditorTools
             var so = new SerializedObject(flow);
             so.FindProperty("nextSceneName").stringValue = "MainMenu";
             so.FindProperty("nextButtonLabel").stringValue = "Torna al menu";
-            so.FindProperty("hintKey").stringValue = "level3_next_hint";
+            // Niente suggerimento proprio del flusso: a livello finito parla gia' Finish()
+            // con level3_end_hint, che dice la stessa cosa. Con una chiave qui, il giorno in
+            // cui qualcuno la generasse il partecipante si troverebbe due battute di fine
+            // livello quasi identiche una dietro l'altra.
+            so.FindProperty("hintKey").stringValue = "";
             so.FindProperty("confirmKey").stringValue = "menu_back";
             var phrases = so.FindProperty("nextPhrases");
             string[] p = { "menu", "torna al menu", "menu principale", "vai al menu" };

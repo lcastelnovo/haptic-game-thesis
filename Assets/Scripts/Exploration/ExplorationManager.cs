@@ -287,7 +287,12 @@ namespace HapticResearch.Exploration
         // sensazione che non sta provando.
         private void HandleThermalDelivered(string id, ThermalRole role)
         {
-            Voice(role == ThermalRole.Warm ? "level3_warm" : "level3_cool");
+            // Si ACCODA, non interrompe: il canale si arma all'ingresso e la battuta
+            // arriva 3 s dopo, cioe' quasi sempre mentre l'introduzione sta ancora
+            // parlando. Troncarla la' significa tagliare l'ultima frase, "quando vuoi
+            // smettere, di': ho finito", che e' l'unico modo che il partecipante ha di
+            // chiudere il livello.
+            VoiceQueued(role == ThermalRole.Warm ? "level3_warm" : "level3_cool");
             Log("thermal_delivered", $"{{\"id\":\"{id}\",\"role\":\"{role.ToString().ToLowerInvariant()}\"}}");
         }
 
