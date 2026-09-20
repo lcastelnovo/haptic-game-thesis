@@ -81,11 +81,18 @@ namespace HapticResearch.Exploration
                     OnDelivered?.Invoke(armedId, armedRole);
                 }
 
-                if (!stillOn && currentId != null && currentRole != ThermalRole.Neutral &&
-                    currentId != suppressedId)
+                // Si segnala SOLO quando il minimo non e' ancora scaduto, cioe' quando il
+                // secondo oggetto davvero non avra' la sua temperatura. Se il minimo e'
+                // gia' passato non e' una soppressione: e' un normale passaggio, e dopo la
+                // grazia il secondo oggetto si arma regolarmente. Con due soli oggetti
+                // termici quel passaggio capita decine di volte a sessione, e la riga
+                // thermal_suppressed - che in analisi deve distinguere "non ha percepito"
+                // da "non gli e' stato mandato" - sarebbe fatta quasi solo di falsi positivi.
+                if (!stillOn && held < minHold && currentId != null &&
+                    currentRole != ThermalRole.Neutral && currentId != suppressedId)
                 {
                     suppressedId = currentId;
-                    OnSuppressed?.Invoke(currentId, held >= minHold ? "grazia" : "minimo_non_scaduto");
+                    OnSuppressed?.Invoke(currentId, "minimo_non_scaduto");
                 }
 
                 if (!stillOn && leftFor >= grace && held >= minHold) Release();

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
+using WeArt.Core;
 using HapticResearch.Audio;
 using HapticResearch.Experiment;
 using HapticResearch.Labyrinth;
@@ -171,6 +172,13 @@ namespace HapticResearch.Exploration
             sfxSource.playOnAwake = false;
 
             probes = new FingerProbeSource();
+            // La spec dice "una mano sola, lato deciso in HapticProfile": senza questo
+            // filtro il rilevamento guarda le punte di ENTRAMBE le mani e vince il minimo
+            // globale, quindi una mano appoggiata sulla tovaglietta terrebbe il contatto
+            // incollato li' e il canale termico armato a vita.
+            probes.SideFilter =
+                (profile.ActuatesLeft ? HandSideFlags.Left : HandSideFlags.None) |
+                (profile.ActuatesRight ? HandSideFlags.Right : HandSideFlags.None);
 
             if (thermalCue == null) thermalCue = GetComponent<ThermalObjectCue>();
             if (thermalCue == null) thermalCue = gameObject.AddComponent<ThermalObjectCue>();
@@ -405,8 +413,19 @@ namespace HapticResearch.Exploration
                 OnTouchChanged?.Invoke(hit);
             }
 
-            if (touched == null || namedThisVisit) return;
+            if (touched == null) return;
             if (Time.time - touchedSince < nameDwellSeconds) return;
+
+            // La richiesta si soddisfa alla SOSTA, non alla nominazione. Nel percorso di
+            // sotto ci sono il cooldown dei nomi e il controllo sulla narrazione: un
+            // oggetto nominato da meno di nameCooldownSeconds non ci arriverebbe mai, ed e'
+            // il caso PIU' probabile, perche' le richieste partono dopo lo stallo o ogni
+            // tre scoperte, cioe' quando gli oggetti sono gia' stati toccati. Il
+            // partecipante faceva esattamente quel che gli era stato chiesto e non
+            // succedeva niente. Lo scheduler ignora da se' le chiamate ripetute.
+            suggestions.NotifyTouched(touched);
+
+            if (namedThisVisit) return;
 
             // Il nome NON si accoda: se la voce sta parlando si riprova al frame dopo, e
             // se intanto il dito se n'e' andato non lo si dice affatto. Una voce che
@@ -429,7 +448,6 @@ namespace HapticResearch.Exploration
 
             if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
             OnObjectNamed?.Invoke(touched);
-            suggestions.NotifyTouched(touched);
         }
 
         // Campiona la posizione della punta a frequenza fissa. `hit` e' l'oggetto sotto il
@@ -461,6 +479,7 @@ namespace HapticResearch.Exploration
         {
             SceneObjectBinding best = null;
             float bestDistance = float.PositiveInfinity;
+            float currentDistance = float.PositiveInfinity;   // distanza dall'oggetto gia' toccato
 
             foreach (var b in bindings)
             {
@@ -469,15 +488,22 @@ namespace HapticResearch.Exploration
                 {
                     if (tip.y > maxTipHeight) continue;   // mano sollevata dal tavolo
                     float d = Vector3.Distance(b.Collider.ClosestPoint(tip), tip);
+                    if (b == touched && d < currentDistance) currentDistance = d;
                     if (d >= bestDistance) continue;
                     bestDistance = d;
                     best = b;
                 }
             }
 
+            // L'isteresi si applica all'oggetto che si sta GIA' toccando, anche quando non
+            // e' il piu' vicino: tazza e piattino sono concentrici per progetto, e sul bordo
+            // il minimo alterna fra i due. Confrontando solo il vincitore, la soglia
+            // ricadeva ogni volta su enterRadius e partivano object_exit/object_enter a
+            // raffica, con il colpetto sonoro a ogni giro - che il partecipante sente.
+            if (touched != null && currentDistance <= exitRadius) return touched;
+
             if (best == null) return null;
-            float threshold = best == touched ? exitRadius : enterRadius;
-            return bestDistance <= threshold ? best : null;
+            return bestDistance <= enterRadius ? best : null;
         }
 
         // I controller vocali segnalano la frase DOPO che l'azione ha deciso: cosi' i
@@ -497,6 +523,7 @@ namespace HapticResearch.Exploration
             Voice(touched.Entry.VoiceKey);
             lastNamed[touched.Id] = Time.time;
             if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
+            suggestions.NotifyTouched(touched);   // chiedere "cos'e' questo" vale come sosta
             VoiceSubtitles.ReportHeard("cos'e' questo", "alta", true, touched.Label);
             Log("voice_query", $"{{\"query\":\"what_is_this\",\"id\":\"{touched.Id}\"}}");
         }

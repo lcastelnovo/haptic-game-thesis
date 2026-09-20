@@ -119,6 +119,41 @@ static class Program
             Check(g.ArmedRole == ThermalRole.Cool, "e lo prende da freddo");
         }
 
+        // 6b) passaggio DOPO il minimo: nessuna soppressione, perche' non c'e' niente di
+        //     soppresso - la temperatura del secondo oggetto arriva davvero, 0,4 s dopo.
+        //     Una riga di log qui sarebbe un falso positivo, e con due soli oggetti termici
+        //     questo passaggio capita decine di volte a sessione.
+        {
+            var g = new ThermalGate(3f, 0.4f);
+            var suppressed = new List<string>();
+            var armed = new List<string>();
+            g.OnSuppressed += (id, reason) => suppressed.Add(id + ":" + reason);
+            g.OnArm += (id, role) => armed.Add(id);
+
+            g.SetTarget("tazza", ThermalRole.Warm);
+            Advance(g, 3.5f);                       // minimo scaduto col dito ancora sopra
+            g.SetTarget("cucchiaino", ThermalRole.Cool);
+            Advance(g, 4f);
+            Check(suppressed.Count == 0,
+                  $"transizione dopo il minimo: nessuna soppressione (sono {suppressed.Count}: {string.Join(", ", suppressed)})");
+            Check(armed.Count == 2 && armed[1] == "cucchiaino", "e il cucchiaino si arma regolarmente");
+        }
+
+        // 6c) il contrario: prima del minimo la soppressione c'e' e dice il motivo, anche
+        //     quando il dito resta sul secondo oggetto fino alla commutazione.
+        {
+            var g = new ThermalGate(3f, 0.4f);
+            var suppressed = new List<string>();
+            g.OnSuppressed += (id, reason) => suppressed.Add(id + ":" + reason);
+
+            g.SetTarget("tazza", ThermalRole.Warm);
+            Advance(g, 0.5f);                       // minimo NON scaduto
+            g.SetTarget("cucchiaino", ThermalRole.Cool);
+            Advance(g, 4f);
+            Check(suppressed.Count == 1 && suppressed[0] == "cucchiaino:minimo_non_scaduto",
+                  $"prima del minimo la soppressione resta, una sola volta (sono {suppressed.Count})");
+        }
+
         // 7) tremolio della mano DOPO erogazione: grazia protegge il canale
         {
             var g = new ThermalGate(3f, 0.4f);

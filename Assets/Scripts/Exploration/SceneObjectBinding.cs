@@ -66,6 +66,16 @@ namespace HapticResearch.Exploration
                 Value = entry.Stiffness,
                 Active = true,
             };
+
+            // La temperatura NON passa di qui. Tutto il canale termico del livello (un
+            // oggetto armato per volta, minimo di tenuta, grazia, soppressione) si regge
+            // sul messaggio diretto di ThermalObjectCue: il campo Temperature del
+            // WeArtTouchableObject scavalcherebbe quelle regole in silenzio, e la
+            // checklist di CLAUDE.md dice di spuntarlo. Qui il DATO vince sempre: lo si
+            // spegne, e il tool di validazione lo segnala come errore a chi lo riaccende.
+            var temperature = touchable.Temperature;
+            temperature.Active = false;
+            touchable.Temperature = temperature;
             return true;
         }
     }

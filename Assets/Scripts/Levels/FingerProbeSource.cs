@@ -28,6 +28,18 @@ namespace HapticResearch.Levels
         private readonly List<Vector3> tips = new List<Vector3>();
         private bool collected;
         private bool demoState;
+        private HandSideFlags sideFilter = HandSideFlags.Left | HandSideFlags.Right;
+
+        // Quali mani guardare. Il default sono ENTRAMBE, com'e' sempre stato: chi non
+        // imposta niente (il labirinto) non cambia comportamento. Chi attua una mano sola
+        // deve restringere, altrimenti la mano ferma sul tavolo - parcheggiata su una
+        // tile larga - vince ogni confronto di distanza e la mano che esplora diventa
+        // invisibile, senza che nulla lo segnali.
+        public HandSideFlags SideFilter
+        {
+            get => sideFilter;
+            set => sideFilter = value;
+        }
 
         // Posizioni in spazio mondo delle punte attive in questo frame.
         public IReadOnlyList<Vector3> Tips => tips;
@@ -53,6 +65,7 @@ namespace HapticResearch.Levels
             {
                 if (p.tip == null || !p.tip.gameObject.activeInHierarchy) continue;
                 if (p.demo != demoOn) continue; // demo ON: solo mani mouse; OFF: solo mani WEART/tracker
+                if ((sideFilter & (p.left ? HandSideFlags.Left : HandSideFlags.Right)) == 0) continue;
                 tips.Add(p.tip.position);
             }
         }
