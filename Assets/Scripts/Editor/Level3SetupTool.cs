@@ -36,6 +36,7 @@ namespace HapticResearch.EditorTools
         private const string Level1Path = "Assets/Scenes/Level1_ShapeRecognition.unity";
         private const string LeftHandPrefab = "Packages/com.weart.sdk/Runtime/Prefabs/WEARTLeftHand.prefab";
         private const string RightHandPrefab = "Packages/com.weart.sdk/Runtime/Prefabs/WEARTRightHand.prefab";
+        private const string TableScenePath = "Assets/Settings/Exploration/TableScene_Colazione_v1.asset";
 
         public static void ConfigureHeadless()
         {
@@ -100,11 +101,16 @@ namespace HapticResearch.EditorTools
                 if (EnsureGraspDebugPanel(scene)) changes++;
                 // Level 3 non ha la geometria da generare (quella del labirinto): solo il manager
                 if (EnsureLevelManager(scene)) changes++;
-                // Validazione degli oggetti: la parte nuova di questo tool.
-                if (!ValidateObjects())
-                {
-                    ok = false;
-                }
+
+                // La validazione del CONTENUTO gira, ma non fa fallire il cablaggio: alla
+                // prima esecuzione - l'unica che crea tutto - l'ExplorationManager non ha
+                // ancora una TableSceneAsset (la lascia vuota EnsureLevelManager di
+                // proposito), quindi la validazione non puo' che essere negativa. Farla
+                // pesare sull'esito significava, in headless, buttare via il cablaggio
+                // appena prodotto con un Exit(1). Qui parla per warning; per gli errori
+                // veri c'e' la voce di menu "Valida oggetti", da rilanciare dopo aver
+                // riempito l'asset.
+                ValidateObjects(asWarnings: true);
             }
             finally
             {
@@ -112,36 +118,49 @@ namespace HapticResearch.EditorTools
             }
 
             if (changes > 0) EditorSceneManager.MarkSceneDirty(scene);
-            Debug.Log($"[Level3Setup] Fatto: {changes} blocchi aggiunti/aggiornati.");
-            return ok;
+            Debug.Log($"[Level3Setup] Fatto: {changes} blocchi aggiunti/aggiornati. " +
+                      "Assegna la TableSceneAsset all'ExplorationManager, poi lancia " +
+                      "'HapticResearch/Level 3/Valida oggetti'.");
+            return ok;   // false SOLO per un cablaggio fallito (prefab mancanti, copia non riuscita)
         }
 
         // --- Validazione degli oggetti: checklist di CLAUDE.md ----
 
         // La checklist "Aggiungere oggetti touchable" di CLAUDE.md, eseguita da una
         // macchina invece che a memoria. Il classico "non sento niente" e' quasi sempre
-        // uno di questi quattro flag, e a occhio in Inspector non si nota. Ogni errore
-        // nomina l'oggetto e dice cosa manca; passa il GameObject come contesto a
-        // Debug.LogError cosi' cliccando in Console si seleziona il colpevole.
+        // uno di questi flag, e a occhio in Inspector non si nota. Ogni segnalazione
+        // nomina l'oggetto e dice cosa manca, e passa il GameObject come contesto: cosi'
+        // cliccando la riga in Console si seleziona il colpevole.
         [MenuItem("HapticResearch/Level 3/Valida oggetti")]
-        public static bool ValidateObjects()
+        public static void ValidateObjectsFromMenu() => ValidateObjects();
+
+        // asWarnings: durante il cablaggio la scena e' ancora a meta' e un errore rosso
+        // sarebbe rumore; da menu invece e' un controllo vero e parla in errori.
+        public static bool ValidateObjects(bool asWarnings = false)
         {
+            void Report(string message, UnityEngine.Object context)
+            {
+                if (asWarnings) Debug.LogWarning(message, context);
+                else Debug.LogError(message, context);
+            }
+
             var manager = Object.FindFirstObjectByType<ExplorationManager>(FindObjectsInactive.Include);
             if (manager == null)
             {
-                Debug.LogError("[Level3Setup] Nessun ExplorationManager in scena.");
+                Report("[Level3Setup] Nessun ExplorationManager in scena.", null);
                 return false;
             }
 
             var scene = manager.Scene;
             if (scene == null)
             {
-                Debug.LogError("[Level3Setup] L'ExplorationManager non ha una TableSceneAsset.");
+                Report("[Level3Setup] L'ExplorationManager non ha una TableSceneAsset: " +
+                       "assegnala nell'Inspector, altrimenti il livello non parte.", null);
                 return false;
             }
             if (!scene.Validate(out string assetError))
             {
-                Debug.LogError($"[Level3Setup] Asset '{scene.SceneId}' non valido: {assetError}");
+                Report($"[Level3Setup] Asset '{scene.SceneId}' non valido: {assetError}", null);
                 return false;
             }
 
@@ -156,12 +175,12 @@ namespace HapticResearch.EditorTools
                 // Verificare che l'id esista nell'asset e non sia duplicato
                 if (!scene.TryGet(b.Id, out _))
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': id '{b.Id}' assente dall'asset.", b);
+                    Report($"[Level3Setup] '{who}': id '{b.Id}' assente dall'asset.", b);
                     problems++;
                 }
                 else if (!seen.Add(b.Id))
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': id '{b.Id}' usato da due oggetti in scena.", b);
+                    Report($"[Level3Setup] '{who}': id '{b.Id}' usato da due oggetti in scena.", b);
                     problems++;
                 }
 
@@ -169,19 +188,19 @@ namespace HapticResearch.EditorTools
                 var col = b.GetComponent<Collider>();
                 if (col == null)
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': manca il Collider.", b);
+                    Report($"[Level3Setup] '{who}': manca il Collider.", b);
                     problems++;
                 }
                 else
                 {
                     if (!col.isTrigger)
                     {
-                        Debug.LogError($"[Level3Setup] '{who}': il Collider non è trigger.", b);
+                        Report($"[Level3Setup] '{who}': il Collider non è trigger.", b);
                         problems++;
                     }
                     if (col is MeshCollider mesh && !mesh.convex)
                     {
-                        Debug.LogError($"[Level3Setup] '{who}': MeshCollider non convex.", b);
+                        Report($"[Level3Setup] '{who}': MeshCollider non convex.", b);
                         problems++;
                     }
                 }
@@ -190,12 +209,12 @@ namespace HapticResearch.EditorTools
                 var rb = b.GetComponent<Rigidbody>();
                 if (rb == null)
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': manca il Rigidbody (senza, il sistema aptico ignora l'oggetto).", b);
+                    Report($"[Level3Setup] '{who}': manca il Rigidbody (senza, il sistema aptico ignora l'oggetto).", b);
                     problems++;
                 }
                 else if (!rb.isKinematic || rb.useGravity)
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': il Rigidbody deve essere kinematic e senza gravita'.", b);
+                    Report($"[Level3Setup] '{who}': il Rigidbody deve essere kinematic e senza gravita'.", b);
                     problems++;
                 }
 
@@ -203,13 +222,30 @@ namespace HapticResearch.EditorTools
                 var touchable = b.GetComponent<WeArtTouchableObject>();
                 if (touchable == null)
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': manca il WeArtTouchableObject.", b);
+                    Report($"[Level3Setup] '{who}': manca il WeArtTouchableObject.", b);
                     problems++;
                 }
-                else if (!touchable.DisableDynamicForce)
+                else
                 {
-                    Debug.LogError($"[Level3Setup] '{who}': 'Disable Dynamic Force' spento: la forza arriverebbe sbagliata sulle dita.", b);
-                    problems++;
+                    if (!touchable.DisableDynamicForce)
+                    {
+                        Report($"[Level3Setup] '{who}': 'Disable Dynamic Force' spento: la forza arriverebbe sbagliata sulle dita.", b);
+                        problems++;
+                    }
+
+                    // La casella Temperature della checklist di CLAUDE.md, qui e SOLO qui,
+                    // non va spuntata: nel Level 3 la temperatura la comanda
+                    // ThermalObjectCue con un messaggio diretto, e quel percorso e' l'unico
+                    // che rispetta un oggetto armato per volta, il minimo di tenuta e la
+                    // soppressione. Col campo del SDK attivo quelle regole verrebbero
+                    // scavalcate in silenzio, senza che niente in scena lo faccia notare.
+                    if (touchable.Temperature.Active)
+                    {
+                        Report($"[Level3Setup] '{who}': 'Temperature' attivo sul WeArtTouchableObject. " +
+                               "Nel Level 3 la temperatura passa solo da ThermalObjectCue: cosi' " +
+                               "isteresi, minimo di tenuta e soppressione verrebbero scavalcati.", b);
+                        problems++;
+                    }
                 }
             }
 
@@ -217,7 +253,7 @@ namespace HapticResearch.EditorTools
             foreach (var entry in scene.Objects)
             {
                 if (seen.Contains(entry.Id)) continue;
-                Debug.LogError($"[Level3Setup] L'asset prevede '{entry.Id}' ma in scena non c'e' nessun oggetto con quell'id.");
+                Report($"[Level3Setup] L'asset prevede '{entry.Id}' ma in scena non c'e' nessun oggetto con quell'id.", null);
                 problems++;
             }
 
@@ -488,11 +524,18 @@ namespace HapticResearch.EditorTools
             // la carica autonomamente in Awake da tutti gli SceneObjectBinding della scena.
             // Qui si collega solo l'asset TableSceneAsset e il profilo, che rimangono vuoti
             // fino a che non li riempie l'operatore (il tool e' idempotente).
-            SetIfEmpty(so, "scene", null); // l'operatore deve assegnare l'asset nel tool
-            SetIfEmpty(so, "profile", null); // se vuoto, l'ExplorationManager crea un profilo di default
+            // La colazione di default, se qualcuno l'ha gia' creata: e' l'unico asset che
+            // il tool puo' indovinare senza sbagliare. Finche' non esiste il campo resta
+            // vuoto e lo riempie l'operatore. Il profilo non si tocca: se resta vuoto
+            // l'ExplorationManager ne crea uno di default, ma in sessione va assegnato
+            // quello tarato nel Level 2.
+            SetIfEmpty(so, "scene", AssetDatabase.LoadAssetAtPath<TableSceneAsset>(TableScenePath));
 
             so.ApplyModifiedPropertiesWithoutUndo();
-            Debug.Log($"[Level3Setup] ExplorationManager {(created ? "creato" : "aggiornato")}: asset e profilo lasciati vuoti per l'operatore.");
+            bool hasScene = so.FindProperty("scene").objectReferenceValue != null;
+            Debug.Log($"[Level3Setup] ExplorationManager {(created ? "creato" : "aggiornato")}: " +
+                      (hasScene ? "TableSceneAsset collegata" : "TableSceneAsset da assegnare") +
+                      ", profilo aptico da assegnare (quello tarato nel Level 2).");
             return created;
         }
 
@@ -580,14 +623,6 @@ namespace HapticResearch.EditorTools
                 if (c != null) return c;
             }
             return null;
-        }
-
-        private static List<T> FindAllInScene<T>(Scene scene) where T : Component
-        {
-            var list = new List<T>();
-            foreach (var r in scene.GetRootGameObjects())
-                list.AddRange(r.GetComponentsInChildren<T>(true));
-            return list;
         }
     }
 }
