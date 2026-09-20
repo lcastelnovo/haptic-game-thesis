@@ -90,6 +90,12 @@ namespace HapticResearch.Exploration
         [SerializeField] private string[] whatIsMissingPhrases = { "cosa manca", "che cosa manca", "quanto manca" };
         [SerializeField] private string[] finishPhrases = { "ho finito", "basta cosi'", "ho fatto" };
 
+        [Header("Traccia del dito")]
+        [Tooltip("Registra la posizione del dito nel CSV: in una sandbox senza accuratezza da misurare, la mappa di come si esplora il tavolo E' il risultato.")]
+        [SerializeField] private bool logProbeTrace = true;
+
+        [SerializeField, Range(1f, 30f)] private float probeHz = 10f;
+
         [Header("Logging")]
         [SerializeField] private SessionLogger sessionLogger;
 
@@ -104,6 +110,7 @@ namespace HapticResearch.Exploration
         private float touchedSince;
         private bool namedThisVisit;
         private readonly Dictionary<string, float> lastNamed = new Dictionary<string, float>();
+        private float probeAccumulator;
 
         public TableSceneAsset Scene => scene;
         public HapticProfile Profile => profile;
@@ -230,6 +237,7 @@ namespace HapticResearch.Exploration
             lastNamed.Clear();
             suggestions.ResetAll();
             TouchedLabel = null;
+            probeAccumulator = 0f;
             state = State.Exploring;
             levelStartTime = Time.time;
             levelEndTime = -1f;
@@ -411,6 +419,16 @@ namespace HapticResearch.Exploration
             if (touched.Entry.Discoverable) MarkDiscovered(touched.Id);
             OnObjectNamed?.Invoke(touched);
             suggestions.NotifyTouched(touched);
+
+            if (!logProbeTrace || probeHz <= 0f) return;
+            probeAccumulator += dt;
+            float period = 1f / probeHz;
+            if (probeAccumulator < period) return;
+            probeAccumulator = 0f;
+            if (!probes.TryLowestTip(out var tip)) return;
+            Log("probe",
+                $"{{\"x\":{F(tip.x, "0.000")},\"z\":{F(tip.z, "0.000")}," +
+                $"\"id\":\"{(touched != null ? touched.Id : "")}\"}}");
         }
 
         // L'oggetto piu' vicino alla punta dell'indice, con isteresi fra entrata e uscita.
