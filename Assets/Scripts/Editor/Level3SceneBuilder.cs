@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -21,6 +22,12 @@ namespace HapticResearch.EditorTools
     // qualunque rifinitura fatta a mano, quindi il comando "normale" si ferma se la scena
     // c'e' gia': la creazione da zero e l'aggiornamento del contenuto sono due comandi
     // separati (vedi i menu qui sotto).
+    //
+    // Il dato (TableSceneAsset) e' una sola fonte: ogni generazione SOVRASCRIVE gli array
+    // 'objects' e 'suggestions' con quelli incorporati in questo file. E' voluto (senza,
+    // asset e tool divergerebbero alla prima variante), ma un ritocco fatto a mano
+    // nell'Inspector su un asset gia' esistente sparisce senza preavviso a parte un log:
+    // vedi EnsureTableSceneAsset.
     public static class Level3SceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/Level3_Breakfast.unity";
@@ -236,6 +243,15 @@ namespace HapticResearch.EditorTools
                 asset = ScriptableObject.CreateInstance<TableSceneAsset>();
                 AssetDatabase.CreateAsset(asset, AssetPath);
             }
+            else
+            {
+                // L'asset esiste gia': questa chiamata gli sovrascrive 'objects' e
+                // 'suggestions' coi dati incorporati nel tool. Chi avesse ritoccato a mano
+                // una texture o una stiffness nell'Inspector se la vede sparire qui.
+                Debug.LogWarning($"[Level3Builder] '{AssetPath}' esisteva gia': objects/suggestions " +
+                                  "vengono sovrascritti con i dati incorporati nel tool. Eventuali " +
+                                  "ritocchi fatti a mano nell'Inspector sono persi.", asset);
+            }
 
             WriteAssetData(asset);
             EditorUtility.SetDirty(asset);
@@ -261,10 +277,10 @@ namespace HapticResearch.EditorTools
                 elem.FindPropertyRelative("id").stringValue = e.Id;
                 elem.FindPropertyRelative("voiceKey").stringValue = e.VoiceKey;
                 elem.FindPropertyRelative("label").stringValue = e.Label;
-                elem.FindPropertyRelative("texture").enumValueIndex = (int)e.Texture;
+                SetEnumByName(elem.FindPropertyRelative("texture"), e.Texture.ToString());
                 elem.FindPropertyRelative("textureVolume").floatValue = e.TextureVolume;
                 elem.FindPropertyRelative("stiffness").floatValue = e.Stiffness;
-                elem.FindPropertyRelative("role").enumValueIndex = (int)e.Role;
+                SetEnumByName(elem.FindPropertyRelative("role"), e.Role.ToString());
                 elem.FindPropertyRelative("discoverable").boolValue = e.Discoverable;
 
                 var tags = elem.FindPropertyRelative("tags");
@@ -306,17 +322,32 @@ namespace HapticResearch.EditorTools
 
         // Piano del tavolo a y=0.85 (TableTop: localPosition.y=0.8, scala y=0.1, cubo
         // unitario -> top = 0.8 + 0.05). Centro (x,z) e top da CLAUDE.md/spec del Level 3.
-        // La TOVAGLIETTA ha il top 5 mm piu' basso di PROPOSITO (0.855 invece di 0.860):
-        // fa da sfondo sotto piattino/tazza/pane/tovagliolo/bicchiere. Se stesse alla loro
-        // stessa quota, un polpastrello sul bordo della tazza disterebbe zero anche dalla
-        // tovaglietta sottostante (ResolveTouched in ExplorationManager prende l'oggetto
-        // piu' vicino): il contatto resterebbe incollato li' per sempre e non si potrebbe
-        // mai nominare nessun altro oggetto. Non "correggere" questo valore per farlo
-        // combaciare con gli altri: e' la scoperta della revisione finale, non un refuso.
+        //
+        // La TOVAGLIETTA copre INTERAMENTE gli altri sei oggetti: 0.40 x 0.30 centrata a
+        // (0.00, 0.20) -> x in [-0.20, +0.20], z in [0.05, 0.35]. Dentro ci stanno tutti:
+        // piattino x[-0.065,0.065] z[0.155,0.285]; tazza x[-0.16,-0.08] z[0.24,0.32];
+        // cucchiaino x[-0.106,-0.094] z[0.115,0.205]; pane x[0.075,0.165] z[0.235,0.325];
+        // tovagliolo x[0.08,0.18] z[0.10,0.20]; bicchiere x[-0.07,-0.01] z[0.06,0.12].
+        // Nessuna coppia si compenetra (la piu' stretta e' bicchiere/cucchiaino, ~6 cm fra
+        // i bordi) e la tovaglietta resta dentro il tavolo, che finisce a z=0.4.
+        //
+        // Il top della tovaglietta e' 5 mm piu' basso di PROPOSITO (0.855 invece di 0.860):
+        // se stesse alla stessa quota degli altri, un polpastrello sul bordo di uno di
+        // loro disterebbe zero anche da lei (ResolveTouched in ExplorationManager prende
+        // l'oggetto piu' vicino), il contatto resterebbe incollato li' per sempre e non si
+        // potrebbe mai nominare nessun altro oggetto. Non "correggere" questo valore per
+        // farlo combaciare con gli altri: e' la scoperta della revisione finale, non un
+        // refuso.
+        //
+        // Destra/sinistra: il partecipante siede dal lato z=+0.4 e la SUA destra e' -x
+        // (non +x). Verificato in ViveTrackerScene.unity: FrontalCamera sta a z=+0.8 e
+        // guarda verso -z, RightCalibrationTarget e' a x=-0.154, LeftCalibrationTarget a
+        // x=+0.159. Tazza (x=-0.12) e cucchiaino (x=-0.10) sono quindi correttamente alla
+        // sua destra: non spostarli dal lato +x pensando di "raddrizzarli".
         private static readonly ObjectSpec[] Specs =
         {
             new ObjectSpec("tovaglietta", "Tovaglietta", PrimitiveType.Cube,
-                           new Vector3(0.30f, 0.004f, 0.22f), 0.00f, 0.22f, 0.855f),
+                           new Vector3(0.40f, 0.004f, 0.30f), 0.00f, 0.20f, 0.855f),
             new ObjectSpec("piattino", "Piattino", PrimitiveType.Cylinder,
                            new Vector3(0.13f, 0.004f, 0.13f), 0.00f, 0.22f, 0.860f),
             new ObjectSpec("tazza", "Tazza", PrimitiveType.Cylinder,
@@ -328,7 +359,7 @@ namespace HapticResearch.EditorTools
             new ObjectSpec("tovagliolo", "Tovagliolo", PrimitiveType.Cube,
                            new Vector3(0.10f, 0.006f, 0.10f), 0.13f, 0.15f, 0.860f),
             new ObjectSpec("bicchiere", "Bicchiere", PrimitiveType.Cylinder,
-                           new Vector3(0.06f, 0.010f, 0.06f), -0.06f, 0.08f, 0.860f),
+                           new Vector3(0.06f, 0.010f, 0.06f), -0.04f, 0.09f, 0.860f),
         };
 
         private static void BuildObject(Transform parent, ObjectSpec spec)
@@ -392,6 +423,24 @@ namespace HapticResearch.EditorTools
         {
             var p = so.FindProperty(path);
             if (p != null) p.boolValue = v;
+        }
+
+        // 'enumValueIndex' e' un indice nell'array 'enumNames' della property (l'ordine di
+        // DICHIARAZIONE dell'enum), NON il valore intero sottostante. Scrivere (int)valore
+        // funziona oggi solo perche' TextureType e' dichiarato in ordine 0..21 senza buchi:
+        // se il SDK lo riordinasse mantenendo gli stessi interi, un cast diretto scrivereb-
+        // be la texture sbagliata senza nessun errore. Si cerca invece il nome vero
+        // dell'enum fra quelli che la property conosce.
+        private static void SetEnumByName(SerializedProperty property, string valueName)
+        {
+            int idx = Array.IndexOf(property.enumNames, valueName);
+            if (idx < 0)
+            {
+                Debug.LogError($"[Level3Builder] '{valueName}' non e' un valore noto per " +
+                               $"'{property.propertyPath}': il SDK ha rinominato l'enum? Valore NON scritto.");
+                return;
+            }
+            property.enumValueIndex = idx;
         }
 
         // --- Manager --------------------------------------------------------------------

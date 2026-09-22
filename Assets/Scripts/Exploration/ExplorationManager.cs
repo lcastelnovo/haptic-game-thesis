@@ -507,10 +507,11 @@ namespace HapticResearch.Exploration
             }
 
             // L'isteresi si applica all'oggetto che si sta GIA' toccando, anche quando non
-            // e' il piu' vicino: tazza e piattino sono concentrici per progetto, e sul bordo
-            // il minimo alterna fra i due. Confrontando solo il vincitore, la soglia
-            // ricadeva ogni volta su enterRadius e partivano object_exit/object_enter a
-            // raffica, con il colpetto sonoro a ogni giro - che il partecipante sente.
+            // e' il piu' vicino: ogni oggetto della colazione sta SOPRA la tovaglietta (che
+            // fa da sfondo a tutti gli altri), quindi sul bordo il minimo puo' alternare fra
+            // l'oggetto e la tovaglietta sottostante. Confrontando solo il vincitore, la
+            // soglia ricadeva ogni volta su enterRadius e partivano object_exit/object_enter
+            // a raffica, con il colpetto sonoro a ogni giro - che il partecipante sente.
             if (touched != null && currentDistance <= exitRadius) return touched;
 
             if (best == null) return null;
