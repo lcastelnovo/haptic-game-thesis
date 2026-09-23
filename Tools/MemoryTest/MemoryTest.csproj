@@ -26,6 +26,7 @@
     <Compile Include="../../Assets/Scripts/Memory/MemoryGridMap.cs" />
     <Compile Include="../../Assets/Scripts/Memory/DwellDetector.cs" />
     <Compile Include="../../Assets/Scripts/Memory/MemoryBoard.cs" />
+    <Compile Include="../../Assets/Scripts/Memory/MemoryLayoutValidator.cs" />
   </ItemGroup>
 
 </Project>

@@ -18,6 +18,7 @@ static class Program
         GridTests();
         DwellTests();
         BoardTests();
+        ValidatorTests();
 
         Console.WriteLine(failures == 0 ? "TUTTO OK" : $"{failures} controlli FALLITI");
         return failures == 0 ? 0 : 1;
@@ -278,6 +279,72 @@ static class Program
             try { new MemoryBoard(12, new[] { 0, 0, 1, 2 }, new[] { 0, 1 }, false, 1f, 1); }
             catch (ArgumentException) { threw = true; }
             Check(threw, "tessera ripetuta: rifiutato");
+        }
+    }
+
+    // I valori di MemoryLayout_v1 (Task 9): se cambiano li', cambiano qui.
+    static MemoryLayoutInfo ValidInfo()
+    {
+        var l = new MemoryLayoutInfo
+        {
+            Columns = 4, Rows = 3, TileSize = 0.08f, TileGap = 0.02f,
+            CenterX = 0f, CenterZ = 0.20f, YawDegrees = 180f,
+            NearEdgeZ = 0.4f, TableHalfX = 0.75f, MaxReach = 0.40f,
+            DwellSeconds = 1f, MinThermalDwellSeconds = 2.5f,
+        };
+        // CrushedRock = 10, TextileMedium = 9, ProfiledAluminiumMedium = 6 (WeArtCommon.TextureType)
+        l.Signatures.Add(new SignatureInfo("roccia_dura", 10, 100f, 0.9f, false));
+        l.Signatures.Add(new SignatureInfo("roccia_morbida", 10, 100f, 0.2f, false));
+        l.Signatures.Add(new SignatureInfo("tessuto_duro", 9, 100f, 0.9f, false));
+        l.Signatures.Add(new SignatureInfo("tessuto_morbido", 9, 100f, 0.2f, false));
+        l.Signatures.Add(new SignatureInfo("metallo_duro", 6, 100f, 0.9f, false));
+        l.Signatures.Add(new SignatureInfo("metallo_morbido", 6, 100f, 0.2f, false));
+        l.WarmupIds.AddRange(new[] { "roccia_dura", "roccia_morbida", "tessuto_duro" });
+        l.WarmupTiles.AddRange(new[] { 1, 2, 5, 6, 9, 10 });
+        return l;
+    }
+
+    static void Rejected(MemoryLayoutInfo l, string what)
+    {
+        bool ok = MemoryLayoutValidator.Validate(l, out string error);
+        Check(!ok, $"rifiutato: {what}");
+        if (!ok) Console.WriteLine($"    ({what} -> {error})");
+    }
+
+    static void ValidatorTests()
+    {
+        Console.WriteLine("MemoryLayoutValidator");
+
+        var v1 = ValidInfo();
+        Check(MemoryLayoutValidator.Validate(v1, out string err), $"il layout v1 e' valido ({err})");
+
+        // ingombro sul tavolo e orientamento
+        var g = new MemoryGridMap(v1.Columns, v1.Rows, v1.TileSize, v1.TileGap);
+        g.Center(0, out float lx0, out float lz0);
+        MemoryLayoutValidator.ParticipantToTable(v1, lx0, lz0, out float wx0, out float wz0);
+        g.Center(g.Index(v1.Columns - 1, 0), out float lx3, out float lz3);
+        MemoryLayoutValidator.ParticipantToTable(v1, lx3, lz3, out float wx3, out float _);
+        Console.WriteLine($"  tessera 0 sul tavolo: ({wx0:+0.000;-0.000}, {wz0:+0.000;-0.000})");
+        Check(wz0 > 0.25f, "la riga 0 e' la piu' vicina al bordo z=+0.4 (centro atteso a z=+0.30)");
+        Check(wx3 < wx0, "l'ultima colonna (destra del partecipante) sta a x minore: la sua destra e' -x");
+
+        // layout malformati
+        { var l = ValidInfo(); l.Signatures[1] = new SignatureInfo("roccia_dura", 10, 100f, 0.2f, false); Rejected(l, "id di firma duplicato"); }
+        { var l = ValidInfo(); l.Signatures[1] = new SignatureInfo("gemella", 10, 100f, 0.9f, false); Rejected(l, "due firme con parametri identici"); }
+        { var l = ValidInfo(); l.Signatures[0] = new SignatureInfo("roccia_dura", 10, 0f, 0.9f, false); Rejected(l, "firma senza texture (si confonde con la coperta)"); }
+        { var l = ValidInfo(); l.Signatures.Add(new SignatureInfo("settima", 12, 100f, 0.5f, false)); Rejected(l, "sette coppie in dodici tessere"); }
+        { var l = ValidInfo(); l.WarmupIds[2] = "inesistente"; Rejected(l, "riscaldamento con una firma inesistente"); }
+        { var l = ValidInfo(); l.WarmupTiles.RemoveAt(5); Rejected(l, "riscaldamento con 5 tessere per 3 coppie"); }
+        { var l = ValidInfo(); l.WarmupTiles[5] = 1; Rejected(l, "riscaldamento con una tessera ripetuta"); }
+        { var l = ValidInfo(); l.CenterZ = 0.10f; Rejected(l, "griglia che sconfina nella meta' lontana"); }
+        { var l = ValidInfo(); l.MaxReach = 0.30f; Rejected(l, "griglia oltre l'allungo"); }
+        { var l = ValidInfo(); l.YawDegrees = 0f; Rejected(l, "participantYaw col segno sbagliato (riga 0 lontana)"); }
+        {
+            var l = ValidInfo();
+            l.Signatures[4] = new SignatureInfo("metallo_duro", 6, 100f, 0.9f, true);
+            Rejected(l, "firma termica con sosta di 1 s");
+            l.DwellSeconds = 3f;
+            Check(MemoryLayoutValidator.Validate(l, out string e2), $"firma termica con sosta di 3 s: valido ({e2})");
         }
     }
 }
