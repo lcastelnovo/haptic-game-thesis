@@ -17,6 +17,7 @@ static class Program
     {
         GridTests();
         DwellTests();
+        BoardTests();
 
         Console.WriteLine(failures == 0 ? "TUTTO OK" : $"{failures} controlli FALLITI");
         return failures == 0 ? 0 : 1;
@@ -129,6 +130,154 @@ static class Program
             Check(reason == "reset", "Reset a meta' sosta la annulla (motivo: reset)");
             Step(d, 3, 0f, 0f, 0.9f);
             Check(done == 0, "dopo Reset la sosta riparte da zero");
+        }
+    }
+
+    static MemoryBoard NewBoard(int seed, bool open = false, float delay = 1.5f)
+    {
+        var tiles = new List<int>();
+        for (int i = 0; i < 12; i++) tiles.Add(i);
+        return new MemoryBoard(12, tiles, new[] { 0, 1, 2, 3, 4, 5 }, open, delay, seed);
+    }
+
+    static void TickBoard(MemoryBoard b, float seconds)
+    {
+        int n = (int)Math.Round(seconds / 0.1f);
+        for (int i = 0; i < n; i++) b.Tick(0.1f);
+    }
+
+    // Le due tessere con la firma 'sig'.
+    static (int, int) TilesOf(MemoryBoard b, int sig)
+    {
+        int first = -1;
+        for (int t = 0; t < b.TileCount; t++)
+        {
+            if (b.SignatureOf(t) != sig) continue;
+            if (first < 0) first = t; else return (first, t);
+        }
+        throw new InvalidOperationException($"firma {sig} non trovata due volte");
+    }
+
+    static void BoardTests()
+    {
+        Console.WriteLine("MemoryBoard");
+
+        // 1) ogni firma due volte; stesso seed stessa disposizione, seed diverso no
+        {
+            var a = NewBoard(42); var b = NewBoard(42); var c = NewBoard(7);
+            var counts = new int[6];
+            bool same = true, differs = false;
+            for (int t = 0; t < 12; t++)
+            {
+                counts[a.SignatureOf(t)]++;
+                same &= a.SignatureOf(t) == b.SignatureOf(t);
+                differs |= a.SignatureOf(t) != c.SignatureOf(t);
+            }
+            Check(Array.TrueForAll(counts, n => n == 2), "ogni firma compare esattamente due volte");
+            Check(same, "stesso seed, stessa disposizione");
+            Check(differs, "seed diverso, disposizione diversa");
+        }
+
+        // 2) coppia giusta: fuori gioco, conteggi, evento
+        {
+            var b = NewBoard(1);
+            var (p, q) = TilesOf(b, 0);
+            int ma = -1, mb = -1;
+            b.Matched += (x, y) => { ma = x; mb = y; };
+            Check(b.Flip(p) && b.StateOf(p) == TileState.Flipped && b.FirstFlipped == p, "la prima tessera si gira");
+            Check(b.Flip(q), "la seconda si gira");
+            Check(b.StateOf(p) == TileState.Matched && b.StateOf(q) == TileState.Matched, "coppia: entrambe fuori gioco");
+            Check(b.PairsFound == 1 && b.Attempts == 1 && b.FirstFlipped == -1, "una coppia, un tentativo, turno chiuso");
+            Check(ma == p && mb == q, "l'evento Matched porta le due tessere");
+        }
+
+        // 3) coppia sbagliata: evento subito, coperte dopo la pausa, niente flip nel mezzo
+        {
+            var b = NewBoard(1, delay: 1.5f);
+            var (p0, _) = TilesOf(b, 0);
+            var (p1, other) = TilesOf(b, 1);
+            int mismatches = 0, covered = 0;
+            b.Mismatched += info => mismatches++;
+            b.Covered += (x, y) => covered++;
+            b.Flip(p0); b.Flip(p1);
+            Check(mismatches == 1 && b.Busy && b.Attempts == 1, "coppia sbagliata: evento e pausa");
+            Check(!b.Flip(other), "durante la pausa non si gira niente");
+            TickBoard(b, 1.0f);
+            Check(b.StateOf(p0) == TileState.Flipped && covered == 0, "a 1 s sono ancora girate");
+            TickBoard(b, 0.6f);
+            Check(b.StateOf(p0) == TileState.Hidden && b.StateOf(p1) == TileState.Hidden && covered == 1,
+                  "dopo 1,5 s tornano coperte");
+            Check(!b.Busy && b.CanFlip(other), "finita la pausa si gioca di nuovo");
+        }
+
+        // 4) sosta ripetuta sulla tessera gia' girata o su una fuori gioco: ignorata
+        {
+            var b = NewBoard(1);
+            var (p, q) = TilesOf(b, 0);
+            b.Flip(p);
+            Check(!b.Flip(p) && b.Attempts == 0 && b.FirstFlipped == p, "rigirare la stessa tessera non conta");
+            b.Flip(q);
+            Check(!b.Flip(p) && !b.CanFlip(q), "le tessere fuori gioco non si girano");
+        }
+
+        // 5) partnerSeenBefore / secondSeenBefore su una partita scriptata
+        {
+            var b = NewBoard(3, delay: 0.5f);
+            var (a0, a1) = TilesOf(b, 0);
+            var (b0, b1) = TilesOf(b, 1);
+            var (c0, _) = TilesOf(b, 2);
+            var log = new List<MismatchInfo>();
+            b.Mismatched += info => log.Add(info);
+
+            b.Flip(a0); b.Flip(b0); TickBoard(b, 1f);   // turno 1
+            b.Flip(b1); b.Flip(a0); TickBoard(b, 1f);   // turno 2
+            b.Flip(c0); b.Flip(a1); TickBoard(b, 1f);   // turno 3
+
+            Check(log.Count == 3, "tre errori registrati");
+            Check(!log[0].PartnerSeenBefore && !log[0].SecondSeenBefore, "turno 1: niente di gia' visto");
+            Check(log[1].PartnerSeenBefore && log[1].SecondSeenBefore,
+                  "turno 2: la compagna di b1 (b0) e la seconda (a0) erano gia' state girate");
+            Check(!log[2].PartnerSeenBefore && !log[2].SecondSeenBefore,
+                  "turno 3: la compagna di c0 e a1 non erano mai state girate");
+        }
+
+        // 6) partita aperta: le coperte si sentono; chiusa: no
+        {
+            var open = NewBoard(1, open: true);
+            var closed = NewBoard(1, open: false);
+            Check(open.FeelsSignature(0) && !closed.FeelsSignature(0), "coperta: firma solo nella partita aperta");
+            closed.Flip(0);
+            Check(closed.FeelsSignature(0), "girata: firma anche nella partita chiusa");
+        }
+
+        // 7) riscaldamento: tessere assenti, Completed una volta sola
+        {
+            var playing = new[] { 1, 2, 5, 6, 9, 10 };
+            var b = new MemoryBoard(12, playing, new[] { 0, 1, 2 }, true, 1.5f, 5);
+            Check(b.StateOf(0) == TileState.Absent && b.SignatureOf(0) == -1 && !b.CanFlip(0) && !b.FeelsSignature(0),
+                  "le tessere fuori dal riscaldamento sono assenti");
+            int completed = 0;
+            b.Completed += () => completed++;
+            for (int sig = 0; sig < 3; sig++)
+            {
+                var (p, q) = TilesOf(b, sig);
+                b.Flip(p); b.Flip(q);
+            }
+            Check(b.IsComplete && completed == 1 && b.PairsFound == 3, "tre coppie: completata, un solo evento");
+            Check(!b.CanFlip(1), "a partita finita non si gira niente");
+        }
+
+        // 8) costruttore: rifiuta dati incoerenti
+        {
+            bool threw = false;
+            try { new MemoryBoard(12, new[] { 0, 1, 2 }, new[] { 0, 1 }, false, 1f, 1); }
+            catch (ArgumentException) { threw = true; }
+            Check(threw, "3 tessere per 2 coppie: rifiutato");
+
+            threw = false;
+            try { new MemoryBoard(12, new[] { 0, 0, 1, 2 }, new[] { 0, 1 }, false, 1f, 1); }
+            catch (ArgumentException) { threw = true; }
+            Check(threw, "tessera ripetuta: rifiutato");
         }
     }
 }
