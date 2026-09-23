@@ -16,6 +16,7 @@ static class Program
     static int Main()
     {
         GridTests();
+        DwellTests();
 
         Console.WriteLine(failures == 0 ? "TUTTO OK" : $"{failures} controlli FALLITI");
         return failures == 0 ? 0 : 1;
@@ -48,5 +49,86 @@ static class Program
         Check(x0 < 0f && z0 < 0f, "la tessera 0 e' vicina e a sinistra per il partecipante");
         Check(g.ColumnOf(5) == 1 && g.RowOf(5) == 1 && g.Index(1, 1) == 5,
               "indice = riga * colonne + colonna");
+    }
+
+    // Frame finti da 50 ms, regolari.
+    static void Step(DwellDetector d, int tile, float x, float z, float seconds)
+    {
+        int n = (int)Math.Round(seconds / 0.05f);
+        for (int i = 0; i < n; i++) d.Update(tile, x, z, 0.05f);
+    }
+
+    static void DwellTests()
+    {
+        Console.WriteLine("DwellDetector");
+
+        // 1) dito fermo oltre la sosta: un avvio, un completamento, nessun annullo
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            int started = 0, done = 0, cancelled = 0;
+            d.Started += t => started++;
+            d.Completed += t => done++;
+            d.Cancelled += (t, s, r) => cancelled++;
+            Step(d, 3, 0f, 0f, 1.5f);
+            Check(started == 1 && done == 1 && cancelled == 0, "dito fermo 1,5 s: una sosta completata");
+            Step(d, 3, 0f, 0f, 2f);
+            Check(done == 1, "restando fermi non si ri-completa");
+        }
+
+        // 2) un tremolio entro il raggio non azzera
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            int done = 0;
+            d.Completed += t => done++;
+            for (int i = 0; i < 30; i++) d.Update(3, i % 2 == 0 ? 0.008f : -0.004f, 0.005f, 0.05f);
+            Check(done == 1, "un tremolio di 1,2 cm non azzera la sosta");
+        }
+
+        // 3) uscire dalla tessera a meta' annulla, col motivo
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            string reason = null; int done = 0;
+            d.Cancelled += (t, s, r) => reason = r;
+            d.Completed += t => done++;
+            Step(d, 3, 0f, 0f, 0.6f);
+            Step(d, -1, 0f, 0f, 0.1f);
+            Check(reason == "uscita" && done == 0, "uscire dalla tessera annulla (motivo: uscita)");
+        }
+
+        // 4) oltre il raggio annulla e riparte dal nuovo punto
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            string reason = null; int done = 0;
+            d.Cancelled += (t, s, r) => reason = r;
+            d.Completed += t => done++;
+            Step(d, 3, 0f, 0f, 0.6f);
+            Step(d, 3, 0.03f, 0f, 0.6f);
+            Check(reason == "raggio" && done == 0, "muoversi di 3 cm annulla (motivo: raggio)");
+            Step(d, 3, 0.03f, 0f, 0.6f);
+            Check(done == 1, "e la sosta riparte dal nuovo punto");
+        }
+
+        // 5) far scorrere il dito non fa partire niente, nemmeno un annullo
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            int started = 0, cancelled = 0;
+            d.Started += t => started++;
+            d.Cancelled += (t, s, r) => cancelled++;
+            for (int i = 0; i < 40; i++) d.Update(3, i * 0.005f, 0f, 0.05f);   // 10 cm/s
+            Check(started == 0 && cancelled == 0, "dito che scorre a 10 cm/s: niente tono, niente log");
+        }
+
+        // 6) Reset annulla e fa ripartire da zero
+        {
+            var d = new DwellDetector(1f, 0.015f, 0.25f);
+            string reason = null; int done = 0;
+            d.Cancelled += (t, s, r) => reason = r;
+            d.Completed += t => done++;
+            Step(d, 3, 0f, 0f, 0.5f);
+            d.Reset();
+            Check(reason == "reset", "Reset a meta' sosta la annulla (motivo: reset)");
+            Step(d, 3, 0f, 0f, 0.9f);
+            Check(done == 0, "dopo Reset la sosta riparte da zero");
+        }
     }
 }

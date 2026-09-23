@@ -24,6 +24,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="../../Assets/Scripts/Memory/MemoryGridMap.cs" />
+    <Compile Include="../../Assets/Scripts/Memory/DwellDetector.cs" />
   </ItemGroup>
 
 </Project>
