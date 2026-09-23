@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Banco di prova della logica del memory tattile (Level 3 alternativo), FUORI da Unity.
+
+        cd Tools/MemoryTest && dotnet run
+
+    Perche' esiste: griglia, sosta e partita sono aritmetica e macchine a stati. Un errore
+    li' non si vede in Scene view: si vede a sessione finita, con un "coppia sbagliata"
+    registrato su due tessere che erano uguali.
+
+    Come ExplorationTest non serve nessuna DLL di Unity: le classi compilate sono C# puro.
+    Se un giorno servisse un 'using UnityEngine', quel pezzo va in un MonoBehaviour.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>MemoryTest</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/Scripts/Memory/MemoryGridMap.cs" />
+  </ItemGroup>
+
+</Project>
