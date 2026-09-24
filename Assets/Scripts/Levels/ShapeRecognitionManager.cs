@@ -436,10 +436,12 @@ namespace HapticResearch.Levels
                 InspectHeld(gloveGrabControllers[i].CurrentGrabbable, "guanto_sim", ref candidate, ref ignoredStillHeld);
 
             // Presa delle mani WEART (VR / guanto reale): legge l'oggetto afferrato dal bridge.
+            // La sorgente porta anche CHI ha scritto lo slot (sdk / guanto / demo): in scena
+            // convivono piu' percorsi di presa e col solo lato non si sa quale ha parlato.
             if (graspBridge != null)
             {
-                InspectHeldObject(graspBridge.LeftGrasped, "weart_sx", ref candidate, ref ignoredStillHeld);
-                InspectHeldObject(graspBridge.RightGrasped, "weart_dx", ref candidate, ref ignoredStillHeld);
+                InspectHeldObject(graspBridge.LeftGrasped, $"sx:{graspBridge.LeftSource}", ref candidate, ref ignoredStillHeld);
+                InspectHeldObject(graspBridge.RightGrasped, $"dx:{graspBridge.RightSource}", ref candidate, ref ignoredStillHeld);
             }
         }
 

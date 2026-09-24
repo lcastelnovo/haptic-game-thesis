@@ -135,7 +135,7 @@ namespace HapticResearch.Hands
             // Tolgo dallo slot solo cio' che ci avevo messo io: se nel frattempo se n'e'
             // impossessato qualcun altro non lo tocco.
             if (before != null && CurrentSlot() == before.gameObject) bridge.ClearGrasp(isLeftHand);
-            if (after != null) bridge.SetGrasp(after.gameObject, isLeftHand);
+            if (after != null) bridge.SetGrasp(after.gameObject, isLeftHand, "guanto");
 
             if (!debugLog) return;
             if (after != null)

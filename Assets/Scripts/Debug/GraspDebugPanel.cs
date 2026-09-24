@@ -65,9 +65,11 @@ namespace HapticResearch.Debugging
 
             // Bridge: cosa risulta afferrato da ciascuna mano.
             var bridge = WeArtGraspBridge.Instance;
+            // Oltre a COSA c'e' nello slot, CHI ce l'ha messo: sdk (grasp nativo WEART),
+            // guanto (GloveGraspDetector), demo (tasto G col mouse).
             sb.AppendLine(bridge == null
                 ? "Bridge: ASSENTE"
-                : $"Bridge SX: {NameOf(bridge.LeftGrasped)}   DX: {NameOf(bridge.RightGrasped)}");
+                : $"Bridge SX: {NameOf(bridge.LeftGrasped)} [{bridge.LeftSource}]   DX: {NameOf(bridge.RightGrasped)} [{bridge.RightSource}]");
 
             // Stato del livello.
             if (manager != null)
@@ -82,7 +84,15 @@ namespace HapticResearch.Debugging
                 sb.AppendLine($"GrabPoint {(d.IsLeftHand ? "SX" : "DX")}: {(gp.HasValue ? gp.Value.ToString("0.00") : "n/d")}");
             }
 
-            sb.AppendLine($"GloveGraspDetector in scena: {detectors.Length} (log dettagliati in Console)");
+            // Mani demo: e' il discriminante fra i percorsi di presa. Demo ON spegne l'intero
+            // rig mouse, e con lui i GloveGraspDetector che ci stanno sopra; demo OFF fa il
+            // contrario. Chi cerca "perche' la presa non parte" deve vedere questo per primo.
+            sb.AppendLine($"Mani demo: {(HandDemoModeController.Exists ? (HandDemoModeController.DemoActive ? "ON (presa dal tasto G)" : "OFF (presa dai guanti)") : "nessun controller")}");
+
+            int attivi = 0;
+            foreach (var d in detectors)
+                if (d != null && d.isActiveAndEnabled) attivi++;
+            sb.AppendLine($"GloveGraspDetector: {attivi} attivi su {detectors.Length} in scena (log dettagliati in Console)");
 
             var content = new GUIContent(sb.ToString());
             var size = style.CalcSize(content);
