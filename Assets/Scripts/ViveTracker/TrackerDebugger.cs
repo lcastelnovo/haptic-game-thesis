@@ -17,16 +17,10 @@ public class TrackerDebugger : MonoBehaviour
             r.enabled = ShowDebugObjects;
         }
 
-        EVRInitError initError = EVRInitError.None;
-        vrSystem = OpenVR.Init(ref initError, EVRApplicationType.VRApplication_Other);
-
-        Debug.Log($"OpenVR init result: {initError}");
-
-        if (initError != EVRInitError.None)
-        {
-            Debug.LogError("OpenVR failed to initialize.");
+        // Sessione condivisa: niente Init/Shutdown per scena (vedi OpenVRSession).
+        vrSystem = OpenVRSession.Acquire();
+        if (vrSystem == null)
             return;
-        }
 
         poses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
     }
@@ -96,10 +90,7 @@ public class TrackerDebugger : MonoBehaviour
 
     void OnDestroy()
     {
-        if (vrSystem != null)
-        {
-            OpenVR.Shutdown();
-            vrSystem = null;
-        }
+        // La sessione OpenVR resta aperta: la chiude OpenVRSession all'uscita dall'app.
+        vrSystem = null;
     }
 }

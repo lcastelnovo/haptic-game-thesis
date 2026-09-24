@@ -128,6 +128,10 @@ Tracking esterno opzionale (tracker montato sul TouchDIVER per posizione mano re
   Premere **Space** in gioco con il palmo della mano di calibrazione (lato definito
   da `CalibrationHandSide`) completamente appoggiato al tavolo, dita perpendicolari
   al bordo
+- `OpenVRSession`: **unica** sessione OpenVR del processo, aperta alla prima richiesta e
+  chiusa solo all'uscita (o all'uscita dal Play mode). Nessuno script deve chiamare
+  `OpenVR.Init` / `OpenVR.Shutdown` per conto suo: chiudere e riaprire SteamVR al cambio scena,
+  o farlo da due script insieme, manda Unity in crash nativo dentro `vrclient_x64.dll`
 - `TrackerDebugger`: abilitare temporaneamente come component per loggare seriali e
   posizioni di tutti i tracker connessi, poi disabilitarlo (`Show Debug Objects` ON
   mostra anche i gameobject di calibrazione `RightCalibrationTarget` /
