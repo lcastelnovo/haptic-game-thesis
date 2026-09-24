@@ -60,7 +60,7 @@ namespace HapticResearch.UI
             if (Instance != null) Instance.StartCoroutine(Instance.FadeOutAndLoad(sceneName, readyGate));
             else
             {
-                WeArtSceneTransition.ReleaseCurrentController();
+                WeArtSceneTransition.PrepareForSceneChange();
                 SceneManager.LoadScene(sceneName);
             }
         }
@@ -173,9 +173,9 @@ namespace HapticResearch.UI
             }
 
             loadingBarFill.sizeDelta = new Vector2(LoadingBarWidth, 0f);
-            // Il guanto della scena vecchia va chiuso prima che la nuova faccia l'Awake:
+            // Il guanto passa alla scena nuova con la sua connessione, prima dell'Awake:
             // vedi WeArtSceneTransition.
-            WeArtSceneTransition.ReleaseCurrentController();
+            WeArtSceneTransition.PrepareForSceneChange();
             op.allowSceneActivation = true;
         }
 

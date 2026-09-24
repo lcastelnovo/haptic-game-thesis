@@ -108,12 +108,12 @@ Bridge custom sopra il SDK Weart per coesistenza con l'hand controller nostro:
 - `HapticFingerSetup`: mappatura dita Unity → attuatori TouchDIVER
 - `WeArtTrackingSetup`: config tracking quando si usa SDK nativo
 - `Assets/Scripts/Debug/HapticTriggerMonitor`: diagnostica trigger aptici
-- `WeArtSceneTransition`: chiude il `WeArtController` della scena vecchia prima che la nuova
-  venga attivata (lo chiama `SceneFader`). Senza, al passaggio livello → livello il controller
-  nuovo si auto-distrugge (trova ancora il vecchio in `_instance`), socket e thread del vecchio
-  restano aperti e il guanto sembra "bloccato". Chiude solo la connessione: la sessione del
-  middleware **resta in RUNNING** (fermarla rompe tracking e aptica nel livello dopo).
-  **Ogni cambio scena deve passare da `SceneFader`**
+- `WeArtSceneTransition`: tiene **un solo** `WeArtController` per tutta l'app. Il SDK avvia un
+  solo client per processo (`_clientsStarted` è statico): il controller di ogni scena dopo la
+  prima non si connette mai. Quindi il primo controller che lascia la sua scena passa in
+  `DontDestroyOnLoad` con la sua connessione, e quelli delle scene successive vengono spenti
+  prima dello `Start`. Senza questo, dal secondo livello in poi niente dita né aptica.
+  **Ogni cambio scena deve passare da `SceneFader`**, che chiama `PrepareForSceneChange()`
 - `GloveCalibration`: calibrazione unica = dita del TouchDIVER + allineamento Vive Tracker,
   stessa posa (palmo sul tavolo, dita distese). La usano **Space** e "Avvia livello"
   (`LevelController.RequestStart()`: voce "appoggia la mano", calibrazione, voce "fatto", poi
