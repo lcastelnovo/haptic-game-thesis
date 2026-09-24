@@ -104,6 +104,13 @@ namespace HapticResearch.Memory
         private int currentTile = MemoryGridMap.Outside;
         private float currentSince;
         private string pendingVia = "sosta";
+
+        // Tessera sotto un dito che non si e' ancora mosso da un evento (flip, ricopertura,
+        // inizio fase): niente sosta su di lei finche' il dito non la lascia. Un partecipante
+        // cieco sta fermo ad ascoltare "Coppia!" o la consegna della fase 2, e quel dito fermo
+        // girerebbe una tessera da solo, loggata come scelta ("via=sosta").
+        private int blockedTile = MemoryGridMap.Outside;
+        private bool blockNextTile;
         private int seed;
         private int warmupAttempts;
         private float levelStartTime = -1f, levelEndTime = -1f, phaseStartTime;
@@ -284,10 +291,19 @@ namespace HapticResearch.Memory
             }
 
             UpdateContact(tile);
-            dwell.Update(board.CanFlip(tile) ? tile : -1, lx, lz, dt);
+
+            // Il blocco si prende sulla tessera di QUESTO frame (la ricopertura arriva da
+            // board.Tick qui sopra) e si scioglie appena il dito e' altrove.
+            if (blockNextTile) { blockedTile = tile; blockNextTile = false; }
+            if (tile != blockedTile) blockedTile = MemoryGridMap.Outside;
+            // Bloccata anche per il tasto G: l'operatore che gira "la tessera sotto il dito"
+            // mentre il dito non si e' mosso rifarebbe lo stesso flip involontario.
+            bool flippable = tile != blockedTile && board.CanFlip(tile);
+
+            dwell.Update(flippable ? tile : -1, lx, lz, dt);
             if (dwell.Running && toneSource.isPlaying) toneSource.pitch = Mathf.Lerp(1f, 2f, dwell.Progress01);
 
-            if (Input.GetKeyDown(flipKey) && board.CanFlip(tile))
+            if (Input.GetKeyDown(flipKey) && flippable)
             {
                 dwell.Reset();
                 StopTone();
@@ -315,11 +331,12 @@ namespace HapticResearch.Memory
             board.Flipped += HandleFlipped;
             board.Matched += HandleMatched;
             board.Mismatched += HandleMismatched;
-            board.Covered += (a, b) => { RefreshTile(a); RefreshTile(b); };
+            board.Covered += (a, b) => { RefreshTile(a); RefreshTile(b); blockNextTile = true; };
             board.Completed += HandleCompleted;
 
             dwell.Reset();
             StopTone();
+            blockNextTile = true;   // il dito resta dov'era: la tessera sotto non si gira da sola
             phaseStartTime = Time.time;
             RefreshTiles();
 
@@ -371,6 +388,7 @@ namespace HapticResearch.Memory
         private void HandleFlipped(int t)
         {
             RefreshTile(t);
+            blockedTile = t;   // si sblocca quando il dito la lascia (vedi Update)
             Log("flip",
                 $"{{\"phase\":{Phase},\"turn\":{board.Turn},\"tile\":{t},\"sig\":\"{SigId(t)}\"," +
                 $"\"via\":\"{pendingVia}\",\"seconds\":{F(Time.time - phaseStartTime)}}}");
