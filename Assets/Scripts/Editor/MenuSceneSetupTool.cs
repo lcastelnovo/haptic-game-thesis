@@ -11,7 +11,7 @@ using HapticResearch.Menu;
 namespace HapticResearch.EditorTools
 {
     // Genera la scena del MENU PRINCIPALE (Assets/Scenes/MainMenu.unity) e sistema la
-    // Scene List della build nell'ordine: MainMenu -> Level1 -> Labyrinth -> Level3.
+    // Scene List della build nell'ordine: MainMenu -> Level1 -> Labyrinth -> Level3 -> Level3_Memory.
     //
     // Il menu e' una scena MINIMALE (camera + luce + controller): niente rig WEART/mani,
     // cosi' la calibrazione del TouchDIVER parte una sola volta, entrando nel livello.
@@ -27,6 +27,7 @@ namespace HapticResearch.EditorTools
         private const string Level1ScenePath = "Assets/Scenes/Level1_ShapeRecognition.unity";
         private const string LabyrinthScenePath = "Assets/Scenes/Labyrinth.unity";
         private const string Level3ScenePath = "Assets/Scenes/Level3_Breakfast.unity";
+        private const string Level3MemoryScenePath = "Assets/Scenes/Level3_Memory.unity";
 
         public static void ConfigureHeadless() => Configure();
 
@@ -59,7 +60,7 @@ namespace HapticResearch.EditorTools
             EditorSceneManager.SaveScene(scene, MenuScenePath);
             AssetDatabase.SaveAssets();
             UpdateBuildSceneList();
-            Debug.Log("[MenuSetup] Fatto: scena menu (UI + voce) pronta e Scene List = MainMenu, Level1, Labyrinth, Level3.");
+            Debug.Log("[MenuSetup] Fatto: scena menu (UI + voce) pronta e Scene List = MainMenu, Level1, Labyrinth, Level3, Level3_Memory.");
         }
 
         private static MainMenuSceneController CreateController()
@@ -78,7 +79,7 @@ namespace HapticResearch.EditorTools
             // Config livelli via SerializedObject (= compilare l'Inspector a mano).
             var so = new SerializedObject(controller);
             var levels = so.FindProperty("levels");
-            levels.arraySize = 3;
+            levels.arraySize = 4;
 
             SetLevel(levels.GetArrayElementAtIndex(0), "level1", "Level1_ShapeRecognition", KeyCode.Alpha1,
                 new[] { "uno", "livello uno", "forme", "riconoscimento forme", "riconoscimento delle forme" });
@@ -86,6 +87,10 @@ namespace HapticResearch.EditorTools
                 new[] { "due", "livello due", "labirinto" });
             SetLevel(levels.GetArrayElementAtIndex(2), "level3", "Level3_Breakfast", KeyCode.Alpha3,
                 new[] { "tre", "livello tre", "colazione" });
+            // Alternativa alla colazione: stesso "livello tre", l'operatore sceglie quale
+            // far giocare. L'id diverso tiene separate le due scene nei log.
+            SetLevel(levels.GetArrayElementAtIndex(3), "level3_memory", "Level3_Memory", KeyCode.Alpha4,
+                new[] { "quattro", "livello quattro", "memory", "memory tattile" });
 
             so.ApplyModifiedProperties();
         }
@@ -139,21 +144,22 @@ namespace HapticResearch.EditorTools
                 new Color(1f, 1f, 1f, 0.85f), -420f, new Vector2(1400f, 50f));
 
             // Bottoni livello: stessa azione di voce e tasti (SelectLevelByIndex).
-            // Tre bottoni invece di due: la fila si stringe e sale, per non finire sopra
-            // i crediti ancorati in fondo alla pagina.
-            AddLevelButton(canvasGo.transform, controller, 0, "1. Riconoscimento delle forme", -500f);
-            AddLevelButton(canvasGo.transform, controller, 1, "2. Labirinto", -600f);
-            AddLevelButton(canvasGo.transform, controller, 2, "3. Colazione", -700f);
+            // Quattro bottoni: la fila si stringe (76 px, passo 85) e resta sopra i crediti
+            // ancorati in fondo alla pagina.
+            AddLevelButton(canvasGo.transform, controller, 0, "1. Riconoscimento delle forme", -490f);
+            AddLevelButton(canvasGo.transform, controller, 1, "2. Labirinto", -575f);
+            AddLevelButton(canvasGo.transform, controller, 2, "3. Colazione", -660f);
+            AddLevelButton(canvasGo.transform, controller, 3, "3b. Memory tattile", -745f);
 
             // Bottone secondario: ripete l'annuncio vocale delle opzioni.
             var repeatBtn = AddButton(canvasGo.transform, "RepeatButton", "Ripeti annuncio vocale  (R)", 26,
-                -800f, new Vector2(520f, 64f), UnibsBlueLight);
+                -835f, new Vector2(520f, 64f), UnibsBlueLight);
             UnityEventTools.AddVoidPersistentListener(repeatBtn.onClick, controller.AnnounceOptions);
 
             // Suggerimento per l'operatore su cosa puo' dire il partecipante.
             AddText(canvasGo.transform, "VoiceHint",
-                "Il partecipante può dire:  «uno», «due», «tre» oppure «ripeti»", 24,
-                FontStyle.Italic, new Color(1f, 1f, 1f, 0.7f), -880f, new Vector2(1400f, 40f));
+                "Il partecipante può dire:  «uno», «due», «tre», «quattro» oppure «ripeti»", 24,
+                FontStyle.Italic, new Color(1f, 1f, 1f, 0.7f), -905f, new Vector2(1400f, 40f));
 
             // Crediti in fondo alla pagina.
             var credits = NewRect("Credits", canvasGo.transform);
@@ -172,7 +178,7 @@ namespace HapticResearch.EditorTools
 
         private static void AddLevelButton(Transform parent, MainMenuSceneController controller, int index, string label, float y)
         {
-            var btn = AddButton(parent, $"LevelButton{index + 1}", label, 36, y, new Vector2(720f, 88f), Color.white);
+            var btn = AddButton(parent, $"LevelButton{index + 1}", label, 36, y, new Vector2(720f, 76f), Color.white);
             UnityEventTools.AddIntPersistentListener(btn.onClick, controller.SelectLevelByIndex, index);
         }
 
@@ -263,6 +269,7 @@ namespace HapticResearch.EditorTools
                 new EditorBuildSettingsScene(Level1ScenePath, true),
                 new EditorBuildSettingsScene(LabyrinthScenePath, true),
                 new EditorBuildSettingsScene(Level3ScenePath, true),
+                new EditorBuildSettingsScene(Level3MemoryScenePath, true),
             };
         }
     }
