@@ -71,5 +71,5 @@ MonoBehaviour:
   dwellSeconds: 3
   dwellRadius: 0.015
   dwellQuietSeconds: 0.25
-  mismatchDelay: 1.5
+  mismatchDelay: 3.5
   minThermalDwellSeconds: 2.5

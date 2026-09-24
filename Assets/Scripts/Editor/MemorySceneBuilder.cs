@@ -309,8 +309,14 @@ namespace HapticResearch.EditorTools
         private static bool EnsureLayouts(out string report)
         {
             EnsureFolder(AssetDir);
-            var v1 = WriteLayout(LayoutPath, "memory_v1", 1f, thermalMetal: false);
-            var thermal = WriteLayout(ThermalLayoutPath, "memory_termico_v1", 3f, thermalMetal: true);
+            var v1 = WriteLayout(LayoutPath, "memory_v1", 1f, 1.5f, thermalMetal: false);
+            // Variante termica: la temperatura si arma solo a tessera GIRATA (armarla durante
+            // la sosta rivelerebbe la firma prima del flip). Una seconda tessera sbagliata resta
+            // girata mismatchDelay secondi: 3.5 s coprono la salita del Peltier (2-3 s) e i 3 s
+            // di tenuta minima di ThermalObjectCue, cosi' il freddo non arriva a tessera gia'
+            // ricoperta. Su una coppia giusta la seconda tessera esce subito: li' la temperatura
+            // non arriva comunque (limite scritto nella spec, "Variante termica").
+            var thermal = WriteLayout(ThermalLayoutPath, "memory_termico_v1", 3f, 3.5f, thermalMetal: true);
             AssetDatabase.SaveAssets();
 
             if (!v1.Validate(out string e1)) { report = $"'{LayoutPath}' non valido: {e1}"; return false; }
@@ -319,7 +325,8 @@ namespace HapticResearch.EditorTools
             return true;
         }
 
-        private static MemoryLayoutAsset WriteLayout(string path, string layoutId, float dwellSeconds, bool thermalMetal)
+        private static MemoryLayoutAsset WriteLayout(string path, string layoutId, float dwellSeconds,
+                                                     float mismatchDelay, bool thermalMetal)
         {
             var asset = AssetDatabase.LoadAssetAtPath<MemoryLayoutAsset>(path);
             if (asset == null)
@@ -336,6 +343,7 @@ namespace HapticResearch.EditorTools
             var so = new SerializedObject(asset);
             so.FindProperty("layoutId").stringValue = layoutId;
             so.FindProperty("dwellSeconds").floatValue = dwellSeconds;
+            so.FindProperty("mismatchDelay").floatValue = mismatchDelay;
 
             var sigs = so.FindProperty("signatures");
             sigs.arraySize = V1.Length;
