@@ -38,13 +38,17 @@ namespace HapticResearch.EditorTools
             "Assets/Scenes/Level3_Memory.unity",
         };
 
+        // Il verdetto sulla ShaderGraph delle mani, gia' pronto da stampare.
+        // null = tutto a posto.
+        private static string causaShaderGraph;
+
         [MenuItem("HapticResearch/Strumenti/Diagnostica materiali mani")]
         public static void RunOnOpenScene()
         {
             var sb = new StringBuilder();
             Intestazione(sb);
             Analizza(SceneManager.GetActiveScene(), sb);
-            Debug.Log(sb.ToString());
+            Consegna(sb);
         }
 
         public static void RunHeadless()
@@ -53,20 +57,41 @@ namespace HapticResearch.EditorTools
             Intestazione(sb);
             foreach (var path in ScenesHeadless)
                 Analizza(EditorSceneManager.OpenScene(path, OpenSceneMode.Single), sb);
-            Debug.Log(sb.ToString());
+            Consegna(sb);
             EditorApplication.Exit(0);
+        }
+
+        // Il report intero non ci sta nella console di Unity, che di un messaggio lungo
+        // mostra solo le prime righe: finisce su file, e in console restano il verdetto e
+        // il percorso. Il verdetto e' un LogError apposta, cosi' non si perde nella lista.
+        private static void Consegna(StringBuilder sb)
+        {
+            string outPath = System.IO.Path.Combine(
+                System.IO.Directory.GetParent(Application.dataPath).FullName,
+                "DiagnosticaMani.txt");
+            System.IO.File.WriteAllText(outPath, sb.ToString(), Encoding.UTF8);
+
+            if (causaShaderGraph != null)
+                Debug.LogError("[DiagnosticaMani] CAUSA DEL FUCSIA: " + causaShaderGraph
+                    + "  --  report completo in " + outPath);
+            else
+                Debug.Log("[DiagnosticaMani] La ShaderGraph delle mani e' a posto su questa"
+                    + " macchina: il fucsia non viene da li'. Report completo in " + outPath);
         }
 
         // Contesto della macchina: senza questo un report non dice nulla, perche' la
         // stessa scena si comporta diversamente a seconda di dove sta il SDK.
         private static void Intestazione(StringBuilder sb)
         {
+            causaShaderGraph = null;
+
             sb.AppendLine("=== Diagnostica materiali mani ===");
             var srp = GraphicsSettings.defaultRenderPipeline;
             sb.AppendLine("Render pipeline attiva: " + (srp != null ? srp.name : "NESSUNA (built-in!)"));
             if (srp == null)
             {
                 sb.AppendLine("  -> senza URP assegnata ogni materiale URP diventa fucsia.");
+                causaShaderGraph = "nessuna render pipeline URP assegnata (sarebbe fucsia tutta la scena).";
             }
 
             var shaderGraph = Shader.Find("Shader Graphs/URPShaderHandMaterial");
@@ -74,13 +99,22 @@ namespace HapticResearch.EditorTools
             {
                 sb.AppendLine("ShaderGraph mani: NON TROVATA ('Shader Graphs/URPShaderHandMaterial').");
                 sb.AppendLine("  -> il SDK WEART di questa macchina non la contiene, oppure non e' stata importata.");
+                causaShaderGraph ??= "la ShaderGraph 'Shader Graphs/URPShaderHandMaterial' non esiste su"
+                    + " questa macchina: il SDK WEART locale non la contiene o non e' stata importata.";
+                return;
             }
-            else
-            {
-                sb.AppendLine("ShaderGraph mani: trovata in " + AssetDatabase.GetAssetPath(shaderGraph));
-                sb.AppendLine("  supportata su questa macchina: " + shaderGraph.isSupported);
-                Messaggi(shaderGraph, sb, "  ");
-            }
+
+            string percorso = AssetDatabase.GetAssetPath(shaderGraph);
+            sb.AppendLine("ShaderGraph mani: trovata in " + percorso);
+            sb.AppendLine("  supportata su questa macchina: " + shaderGraph.isSupported);
+            Messaggi(shaderGraph, sb, "  ");
+
+            if (!shaderGraph.isSupported)
+                causaShaderGraph ??= "la ShaderGraph delle mani (" + percorso + ") esiste ma NON e'"
+                    + " supportata: import o compilazione falliti su questa macchina.";
+            else if (ShaderUtil.GetShaderMessageCount(shaderGraph) > 0)
+                causaShaderGraph ??= "la ShaderGraph delle mani (" + percorso + ") compila con "
+                    + ShaderUtil.GetShaderMessageCount(shaderGraph) + " messaggi: vedi il report.";
         }
 
         private static void Analizza(Scene scene, StringBuilder sb)
