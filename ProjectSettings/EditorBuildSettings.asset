@@ -14,7 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Labyrinth.unity
     guid: 64c3b0f74d796dd4d96b31927453e1a9
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/Level3_Breakfast.unity
     guid: 6f65d468aa93a442bb4e1ef9f136eeef
   - enabled: 1
