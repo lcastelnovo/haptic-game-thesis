@@ -23,8 +23,11 @@ namespace HapticResearch.Haptics
     //     vengono mai tolte: il controller distrutto riceve ancora eventi, lancia eccezioni
     //     e interrompe gli altri iscritti (CalibrationManager e controller della scena nuova).
     //
-    // Qui si fa pulizia e si ferma la sessione del middleware: il controller della scena
-    // nuova si riconnette e riparte da zero (con Start Calibration Automatically).
+    // Qui si chiude la connessione della scena vecchia e si fa pulizia. La sessione del
+    // middleware invece resta in RUNNING: il controller della scena nuova si riconnette e la
+    // ritrova avviata. Con Client.Stop al cambio scena, nel livello dopo dita e aptica
+    // restavano spente (test del 24 set 2026, livello -> menu -> livello): la sessione
+    // fermata non ripartiva con lo start automatico del SDK.
     // Il codice del SDK non si tocca: quello che e' privato si raggiunge per reflection.
     public static class WeArtSceneTransition
     {
@@ -34,9 +37,9 @@ namespace HapticResearch.Haptics
         private static readonly FieldInfo DevicesReadyField =
             typeof(WeArtStatusTracker).GetField("ConnectedDevicesReady", BindingFlags.NonPublic | BindingFlags.Static);
 
-        // stopSession: true = ferma anche la sessione del middleware (reset completo del
-        // guanto), false = chiude solo la connessione di questa scena.
-        public static void ReleaseCurrentController(bool stopSession = true)
+        // stopSession: true = ferma anche la sessione del middleware (vedi sopra: da non
+        // usare al cambio scena), false = chiude solo la connessione di questa scena.
+        public static void ReleaseCurrentController(bool stopSession = false)
         {
             var controllers = UnityEngine.Object.FindObjectsByType<WeArtController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var controller in controllers)
