@@ -187,8 +187,8 @@ namespace HapticResearch.Voice
 
             if (manager != null)
             {
-            RegisterPhrases(BaseStartPhrases, () => manager.StartLevel());
-            RegisterPhrases(extraStartPhrases, () => manager.StartLevel());
+            RegisterPhrases(BaseStartPhrases, () => manager.RequestStart());
+            RegisterPhrases(extraStartPhrases, () => manager.RequestStart());
             RegisterPhrases(BaseRepeatPhrases, () => manager.RepeatAnnouncement());
             RegisterPhrases(extraRepeatPhrases, () => manager.RepeatAnnouncement());
             }

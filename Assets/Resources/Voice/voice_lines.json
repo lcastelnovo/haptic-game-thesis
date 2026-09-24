@@ -74,5 +74,7 @@
   "level3m_missing_3": "Mancano tre coppie.",
   "level3m_missing_4": "Mancano quattro coppie.",
   "level3m_missing_5": "Mancano cinque coppie.",
-  "level3m_missing_6": "Mancano sei coppie."
+  "level3m_missing_6": "Mancano sei coppie.",
+  "calibration_hold": "Appoggia la mano aperta sul tavolo, con le dita distese, e tienila ferma finché non te lo dico.",
+  "calibration_done": "Fatto, puoi muovere la mano."
 }

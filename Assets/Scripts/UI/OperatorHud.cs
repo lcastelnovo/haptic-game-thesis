@@ -400,9 +400,13 @@ namespace HapticResearch.UI
             by -= btnGap;
 
             by -= set.primaryH;
-            string startLabel = level.IsRunning ? "Riavvia livello" : level.IsComplete ? "Nuovo partecipante" : "Avvia livello";
+            bool calibrating = LevelController.IsCalibrating;
+            string startLabel = calibrating ? "Calibrazione in corso..."
+                : level.IsRunning ? "Riavvia livello" : level.IsComplete ? "Nuovo partecipante" : "Avvia livello";
+            GUI.enabled = !calibrating;
             if (GUI.Button(new Rect(x, by, cw, set.primaryH), startLabel, set.primary))
-                level.StartLevel();
+                level.RequestStart();
+            GUI.enabled = true;
             float bottomTop = by - set.sectionGap;
 
             // Blocco alto: intestazione, livello, stato, hardware.

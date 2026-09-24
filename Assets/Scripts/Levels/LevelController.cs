@@ -30,6 +30,17 @@ namespace HapticResearch.Levels
         // Avvia / riavvia il livello (nuovo partecipante) da qualunque stato.
         public abstract void StartLevel();
 
+        // Avvio dall'operatore o dal partecipante (bottone, Invio, «avvia»): prima la
+        // calibrazione del guanto e del tracker, poi StartLevel. Ignorato se una calibrazione
+        // e' gia' in corso. StartLevel diretto resta per autoStart e test.
+        public void RequestStart()
+        {
+            HapticResearch.Haptics.GloveCalibration.Ensure().Calibrate("level_start", StartLevel);
+        }
+
+        public static bool IsCalibrating =>
+            HapticResearch.Haptics.GloveCalibration.Instance != null && HapticResearch.Haptics.GloveCalibration.Instance.IsCalibrating;
+
         // Ri-annuncia a voce l'obiettivo corrente.
         public abstract void RepeatAnnouncement();
 

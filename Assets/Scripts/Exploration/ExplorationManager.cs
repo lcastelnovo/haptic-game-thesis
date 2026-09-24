@@ -326,7 +326,7 @@ namespace HapticResearch.Exploration
 
         protected virtual void Update()
         {
-            if (Input.GetKeyDown(startKey) && state != State.Exploring) StartLevel();
+            if (Input.GetKeyDown(startKey) && state != State.Exploring) RequestStart();
             if (Input.GetKeyDown(repeatKey)) RepeatAnnouncement();
             if (Input.GetKeyDown(finishKey)) Finish("operatore");
 

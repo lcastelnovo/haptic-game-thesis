@@ -53,51 +53,64 @@ public class ViveTrackerCalibrationManager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (calibrationHandSide == HandSide.Right)
-            {
-                _angleOffset = RightViveTrackerTarget.rotation.eulerAngles.y - RightViveTrackerTransformation.rotation.eulerAngles.y;
-                OffsetOrigin.Rotate(0, _angleOffset, 0, Space.Self);
-
-                _positionOffset = RightViveTrackerTarget.position - RightViveTracker.position;
-                OffsetOrigin.position += _positionOffset;
-            }
+            // Nei livelli Space fa la calibrazione completa (dita del guanto + tracker, vedi
+            // GloveCalibration). Nelle scene template senza livello resta solo il tracker.
+            var fullCalibration = HapticResearch.Haptics.GloveCalibration.Instance;
+            if (fullCalibration != null && fullCalibration.gameObject.scene == gameObject.scene)
+                fullCalibration.Calibrate("space_key");
             else
-            {
-                _angleOffset = LeftViveTrackerTarget.rotation.eulerAngles.y - LeftViveTrackerTransformation.rotation.eulerAngles.y;
-                OffsetOrigin.Rotate(0, _angleOffset, 0, Space.Self);
+                CalibrateSpatial();
+        }
+    }
 
-                _positionOffset = LeftViveTrackerTarget.position - LeftViveTracker.position;
-                OffsetOrigin.position += _positionOffset;
-            }
+    // Allinea lo spazio SteamVR al tavolo: la mano di calibrazione deve essere appoggiata
+    // sul tavolo, nella posa del target di calibrazione.
+    public void CalibrateSpatial()
+    {
+        if (calibrationHandSide == HandSide.Right)
+        {
+            _angleOffset = RightViveTrackerTarget.rotation.eulerAngles.y - RightViveTrackerTransformation.rotation.eulerAngles.y;
+            OffsetOrigin.Rotate(0, _angleOffset, 0, Space.Self);
 
-            LookAtLateralDirection();
+            _positionOffset = RightViveTrackerTarget.position - RightViveTracker.position;
+            OffsetOrigin.position += _positionOffset;
+        }
+        else
+        {
+            _angleOffset = LeftViveTrackerTarget.rotation.eulerAngles.y - LeftViveTrackerTransformation.rotation.eulerAngles.y;
+            OffsetOrigin.Rotate(0, _angleOffset, 0, Space.Self);
 
-            if (allowOnlyLateralRotation)
-            {
-                RightLateralRotationObject.position = RightViveTracker.position;
-                RightLateralRotationObject.rotation = RightViveTracker.rotation;
-                LeftLateralRotationObject.position = LeftViveTracker.position;
-                LeftLateralRotationObject.rotation = LeftViveTracker.rotation;
+            _positionOffset = LeftViveTrackerTarget.position - LeftViveTracker.position;
+            OffsetOrigin.position += _positionOffset;
+        }
 
-                RightLateralRotationObject.parent = RightViveTrackerTransformation;
-                LeftLateralRotationObject.parent = LeftViveTrackerTransformation;
+        LookAtLateralDirection();
 
-                TrackingObjectRight.TrackingSource = RightLateralRotationObject;
-                TrackingObjectLeft.TrackingSource = LeftLateralRotationObject;
+        if (allowOnlyLateralRotation)
+        {
+            RightLateralRotationObject.position = RightViveTracker.position;
+            RightLateralRotationObject.rotation = RightViveTracker.rotation;
+            LeftLateralRotationObject.position = LeftViveTracker.position;
+            LeftLateralRotationObject.rotation = LeftViveTracker.rotation;
 
-            }
+            RightLateralRotationObject.parent = RightViveTrackerTransformation;
+            LeftLateralRotationObject.parent = LeftViveTrackerTransformation;
 
-            if (freezeHeight)
-            {
-                _rightRecordedHeight = RightViveTracker.position.y;
-                _leftRecordedHeight = LeftViveTracker.position.y;
-                _isHeightFrozen = true;
-            }
+            TrackingObjectRight.TrackingSource = RightLateralRotationObject;
+            TrackingObjectLeft.TrackingSource = LeftLateralRotationObject;
 
-            if (freezeAllRotation)
-            {
-                _isRotationFrozen = true;
-            }
+        }
+
+        if (freezeHeight)
+        {
+            _rightRecordedHeight = RightViveTracker.position.y;
+            _leftRecordedHeight = LeftViveTracker.position.y;
+            _isHeightFrozen = true;
+        }
+
+        if (freezeAllRotation)
+        {
+            _isRotationFrozen = true;
         }
     }
 

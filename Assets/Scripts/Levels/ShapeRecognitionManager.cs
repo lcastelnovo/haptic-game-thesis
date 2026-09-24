@@ -287,7 +287,7 @@ namespace HapticResearch.Levels
             if (state == State.Idle || state == State.LevelComplete)
             {
                 // Da Idle: primo avvio. Da LevelComplete: ri-avvio per il partecipante successivo.
-                if (Input.GetKeyDown(startKey)) StartLevel();
+                if (Input.GetKeyDown(startKey)) RequestStart();
                 return;
             }
 

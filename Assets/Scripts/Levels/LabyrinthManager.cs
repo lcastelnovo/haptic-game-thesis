@@ -379,7 +379,7 @@ namespace HapticResearch.Levels
         {
             if (state == State.Idle || state == State.LevelComplete)
             {
-                if (Input.GetKeyDown(startKey)) StartLevel();
+                if (Input.GetKeyDown(startKey)) RequestStart();
                 return;
             }
 

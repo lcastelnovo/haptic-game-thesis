@@ -83,7 +83,7 @@ namespace HapticResearch.Levels
                                   : manager.IsComplete ? "Nuovo partecipante"
                                   : "Avvia livello";
                 if (GUILayout.Button(startLabel, buttonStyle, GUILayout.Height(40f)))
-                    manager.StartLevel();
+                    manager.RequestStart();
 
                 GUI.enabled = manager.IsRunning;
                 if (GUILayout.Button("Ripeti annuncio", buttonStyle, GUILayout.Height(40f)))

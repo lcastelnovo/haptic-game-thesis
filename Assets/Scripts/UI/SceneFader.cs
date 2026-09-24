@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using HapticResearch.Haptics;
 
 namespace HapticResearch.UI
 {
@@ -57,7 +58,11 @@ namespace HapticResearch.UI
         public static void LoadSceneWithFade(string sceneName, Func<bool> readyGate)
         {
             if (Instance != null) Instance.StartCoroutine(Instance.FadeOutAndLoad(sceneName, readyGate));
-            else SceneManager.LoadScene(sceneName);
+            else
+            {
+                WeArtSceneTransition.ReleaseCurrentController();
+                SceneManager.LoadScene(sceneName);
+            }
         }
 
         void Awake()
@@ -168,6 +173,9 @@ namespace HapticResearch.UI
             }
 
             loadingBarFill.sizeDelta = new Vector2(LoadingBarWidth, 0f);
+            // Il guanto della scena vecchia va chiuso prima che la nuova faccia l'Awake:
+            // vedi WeArtSceneTransition.
+            WeArtSceneTransition.ReleaseCurrentController();
             op.allowSceneActivation = true;
         }
 

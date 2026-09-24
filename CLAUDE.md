@@ -108,6 +108,16 @@ Bridge custom sopra il SDK Weart per coesistenza con l'hand controller nostro:
 - `HapticFingerSetup`: mappatura dita Unity → attuatori TouchDIVER
 - `WeArtTrackingSetup`: config tracking quando si usa SDK nativo
 - `Assets/Scripts/Debug/HapticTriggerMonitor`: diagnostica trigger aptici
+- `WeArtSceneTransition`: chiude il `WeArtController` della scena vecchia prima che la nuova
+  venga attivata (lo chiama `SceneFader`). Senza, al passaggio livello → livello il controller
+  nuovo si auto-distrugge (trova ancora il vecchio in `_instance`), socket e thread del vecchio
+  restano aperti e il guanto sembra "bloccato". Ferma anche la sessione del middleware: la
+  scena nuova la riavvia da sé. **Ogni cambio scena deve passare da `SceneFader`**
+- `GloveCalibration`: calibrazione unica = dita del TouchDIVER + allineamento Vive Tracker,
+  stessa posa (palmo sul tavolo, dita distese). La usano **Space** e "Avvia livello"
+  (`LevelController.RequestStart()`: voce "appoggia la mano", calibrazione, voce "fatto", poi
+  `StartLevel`). Esito nel log (`calibration_start` / `calibration_end`); senza middleware si
+  salta il guanto e il livello parte lo stesso
 
 ### Vive Tracker (`Assets/Scripts/ViveTracker/`)
 Tracking esterno opzionale (tracker montato sul TouchDIVER per posizione mano reale):
@@ -429,7 +439,8 @@ da container, niente collider/rigidbody sul parent.
 | F1 | Pannello diagnostico presa (guanti, bridge, grabPoint) |
 | F2 | Mostra / nasconde sottotitoli voce (giocatore / narratore) |
 | F3 | Mostra / nasconde HUD operatore |
-| Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
+| Space | Calibrazione completa (guanto + Vive Tracker), palmo appoggiato al tavolo |
+| Invio / R | Avvia (o riavvia) livello, preceduto dalla calibrazione / ripeti annuncio |
 | N | Livello successivo (Level 1 e Level 2) o torna al menu (Level 3), solo a livello completato |
 | G | Gira la tessera sotto il dito (memory tattile) |
 | Fine | Chiude il livello 3 (colazione o memory) |

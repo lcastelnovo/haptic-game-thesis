@@ -274,7 +274,7 @@ namespace HapticResearch.Memory
 
         protected virtual void Update()
         {
-            if (Input.GetKeyDown(startKey) && !IsRunning) StartLevel();
+            if (Input.GetKeyDown(startKey) && !IsRunning) RequestStart();
             if (Input.GetKeyDown(repeatKey)) RepeatAnnouncement();
             if (Input.GetKeyDown(finishKey)) Finish("operatore");
             if (!IsRunning) return;
