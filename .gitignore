@@ -117,3 +117,5 @@ Tools/*.key
 # Banco di prova .NET di MazeMap (Tools/MazeMapTest)
 Tools/**/bin/
 Tools/**/obj/
+
+docs/superpowers/

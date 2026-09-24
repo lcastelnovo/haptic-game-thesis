@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 701d5d5e5d11a46c1b6cf33262388e47, type: 3}
+  m_Name: TableScene_Colazione_v1
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Exploration.TableSceneAsset
+  sceneId: colazione_v1
+  objects:
+  - id: tovaglietta
+    voiceKey: level3_obj_tovaglietta
+    label: Tovaglietta
+    texture: 9
+    textureVolume: 100
+    stiffness: 0.15
+    role: 0
+    tags:
+    - stoffa
+    discoverable: 0
+  - id: tovagliolo
+    voiceKey: level3_obj_tovagliolo
+    label: Tovagliolo
+    texture: 19
+    textureVolume: 100
+    stiffness: 0.08
+    role: 0
+    tags:
+    - stoffa
+    - morbido
+    discoverable: 1
+  - id: piattino
+    voiceKey: level3_obj_piattino
+    label: Piattino
+    texture: 13
+    textureVolume: 100
+    stiffness: 0.7
+    role: 0
+    tags:
+    - liscio
+    discoverable: 1
+  - id: tazza
+    voiceKey: level3_obj_tazza
+    label: Tazza
+    texture: 13
+    textureVolume: 100
+    stiffness: 0.8
+    role: 1
+    tags:
+    - caldo
+    - liscio
+    discoverable: 1
+  - id: cucchiaino
+    voiceKey: level3_obj_cucchiaino
+    label: Cucchiaino
+    texture: 20
+    textureVolume: 100
+    stiffness: 0.9
+    role: 2
+    tags:
+    - freddo
+    - metallo
+    discoverable: 1
+  - id: pane
+    voiceKey: level3_obj_pane
+    label: Fetta di pane
+    texture: 10
+    textureVolume: 100
+    stiffness: 0.4
+    role: 0
+    tags:
+    - ruvido
+    discoverable: 1
+  - id: bicchiere
+    voiceKey: level3_obj_bicchiere
+    label: Bicchiere
+    texture: 17
+    textureVolume: 100
+    stiffness: 0.95
+    role: 0
+    tags:
+    - liscio
+    - duro
+    discoverable: 1
+  suggestions:
+  - tag: caldo
+    voiceKey: level3_hint_caldo
+    metVoiceKey: level3_hint_caldo_ok
+  - tag: ruvido
+    voiceKey: level3_hint_ruvido
+    metVoiceKey: level3_hint_ruvido_ok
+  - tag: metallo
+    voiceKey: level3_hint_metallo
+    metVoiceKey: level3_hint_metallo_ok
+  - tag: morbido
+    voiceKey: level3_hint_morbido
+    metVoiceKey: level3_hint_morbido_ok
+  maxThermalObjects: 2
