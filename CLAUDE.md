@@ -27,7 +27,7 @@ Niente CI, niente Makefile. Aprire da Unity Hub.
 - Scene di gioco (Scene List, in ordine): `MainMenu.unity` → `Level1_ShapeRecognition.unity`
   → `Labyrinth.unity` (Level 2) → `Level3_Breakfast.unity` (Level 3). Ognuna si cabla con il suo tool editor (menu
   `HapticResearch/...`, anche headless con `-executeMethod`): `MenuSceneSetupTool`,
-  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. Alternativa al Level 3: `Level3_Memory.unity` (memory tattile), scelta dall'operatore nel menu (tasto 4). Tool: `MemorySceneBuilder` / `MemorySetupTool`. `SceneDumpTool` scrive un dump testuale di
+  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. Alternativa al Level 3: `Level3_Memory.unity` (memory tattile), scelta dall'operatore nel menu (tasto 4). Tool: `MemorySceneBuilder` / `MemorySetupTool`; il cablaggio comune a Level 3 e memory sta in `LevelSceneWiring`. `SceneDumpTool` scrive un dump testuale di
   una scena (gerarchia, componenti, campi) per confrontarle senza aprire l'editor
 - Build: File → Build Settings → PC Standalone
 - Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
