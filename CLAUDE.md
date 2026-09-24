@@ -25,9 +25,14 @@ Niente CI, niente Makefile. Aprire da Unity Hub.
 - Scene template: `Assets/Scenes/SampleScene.unity`, `Assets/Scenes/ViveTrackerScene.unity`
   (la `old.unity` è vecchia, da non toccare salvo recupero asset)
 - Scene di gioco (Scene List, in ordine): `MainMenu.unity` → `Level1_ShapeRecognition.unity`
-  → `Labyrinth.unity` (Level 2) → `Level3_Breakfast.unity` (Level 3). Ognuna si cabla con il suo tool editor (menu
-  `HapticResearch/...`, anche headless con `-executeMethod`): `MenuSceneSetupTool`,
-  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. Alternativa al Level 3: `Level3_Memory.unity` (memory tattile), scelta dall'operatore nel menu (tasto 4). Tool: `MemorySceneBuilder` / `MemorySetupTool`; il cablaggio comune a Level 3 e memory sta in `LevelSceneWiring`. `SceneDumpTool` scrive un dump testuale di
+  → `Labyrinth.unity` (Level 2) → `Level3_Memory.unity` (Level 3, tasto 3 nel menu).
+  Ognuna si cabla con il suo tool editor (menu `HapticResearch/...`, anche headless con
+  `-executeMethod`): `MenuSceneSetupTool`, `Level1SetupTool`, `LabyrinthSetupTool`,
+  `MemorySceneBuilder` / `MemorySetupTool`. Il cablaggio comune a colazione e memory sta
+  in `LevelSceneWiring`. `Level3_Breakfast.unity` (la colazione) **resta nella Scene List
+  ma e' scollegata dal menu**: si apre e si prova in editor, in gioco non si raggiunge
+  (per rimetterla fra le opzioni vedi `ConfigureLevels` in `MenuSceneSetupTool`).
+  `SceneDumpTool` scrive un dump testuale di
   una scena (gerarchia, componenti, campi) per confrontarle senza aprire l'editor
 - Build: File → Build Settings → PC Standalone
 - Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
@@ -265,7 +270,14 @@ orientamento rispetto al partecipante, e sei layout malformati che devono essere
 rifiutati. Se tocchi la griglia, rilancia il test. Gira solo su codice **gestito**, niente
 `Quaternion.Euler` o altre API che chiamano il runtime nativo di Unity.
 
-### Colazione (`Assets/Scripts/Exploration/`) - Level 3
+### Colazione (`Assets/Scripts/Exploration/`) - scollegata dal menu
+
+**Non e' piu' il Level 3**: il posto e' del memory tattile (sezione sotto). La colazione
+non e' stata cancellata — scena, script, tool editor e `TableSceneAsset` sono interi e
+funzionanti, e la scena resta nella Scene List — ma non compare fra le opzioni del menu,
+quindi in una sessione non si raggiunge. Si riattiva da `ConfigureLevels` in
+`MenuSceneSetupTool` (c'e' la riga pronta, commentata) piu' la rigenerazione di
+`menu_main`. Tutto quello che segue vale ancora come documentazione del livello.
 
 Sandbox di esplorazione libera senza fallimento. Il partecipante scopre gli oggetti sul
 tavolo, tocca le loro superfici, sente caldo o freddo, e se ha voglia smette a voce
@@ -320,10 +332,11 @@ quali), «ho finito» chiude il livello — lo stesso del tasto **Fine** dell'op
 L'isteresi termica, il comportamento dello scheduler delle richieste e i controlli sul dato
 di scena si verificano con `cd Tools/ExplorationTest && dotnet run`.
 
-### Memory tattile (`Assets/Scripts/Memory/`) - Level 3 alternativo
+### Memory tattile (`Assets/Scripts/Memory/`) - Level 3
 
-Alternativa alla colazione, pronta nel caso il guanto non regga il realismo di "questa e'
-una tazza". Le sensazioni sono un **codice astratto**, come il braille: servono solo che le
+E' il Level 3 **ufficiale**, al posto della colazione: quella chiedeva al guanto di imitare
+oggetti veri ("questa e' una tazza") e non sappiamo se il TouchDIVER regga quel realismo.
+Qui le sensazioni sono un **codice astratto**, come il braille: servono solo che le
 firme si distinguano e che il partecipante se le ricordi. Spec:
 `docs/superpowers/specs/2026-09-23-level3-memory-tattile-design.md`.
 
@@ -448,7 +461,7 @@ da container, niente collider/rigidbody sul parent.
 | Invio / R | Avvia (o riavvia) livello, preceduto dalla calibrazione / ripeti annuncio |
 | N | Livello successivo (Level 1 e Level 2) o torna al menu (Level 3), solo a livello completato |
 | G | Gira la tessera sotto il dito (memory tattile) |
-| Fine | Chiude il livello 3 (colazione o memory) |
+| Fine | Chiude il livello 3 (memory; anche la colazione, se riattivata) |
 | M | Muta / riattiva il microfono |
 | K | Avvia la taratura termica (Level 2), Esc la interrompe |
 | C / F | Risposta "caldo" / "freddo" in taratura, se il microfono non c'è |

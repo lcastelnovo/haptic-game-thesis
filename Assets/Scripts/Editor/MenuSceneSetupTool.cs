@@ -12,6 +12,8 @@ namespace HapticResearch.EditorTools
 {
     // Genera la scena del MENU PRINCIPALE (Assets/Scenes/MainMenu.unity) e sistema la
     // Scene List della build nell'ordine: MainMenu -> Level1 -> Labyrinth -> Level3 -> Level3_Memory.
+    // Il Level 3 ufficiale e' Level3_Memory; Level3_Breakfast (colazione) resta nella lista
+    // ma e' scollegata dal menu (vedi ConfigureLevels), quindi in gioco non si raggiunge.
     //
     // Il menu e' una scena MINIMALE (camera + luce + controller): niente rig WEART/mani,
     // cosi' la calibrazione del TouchDIVER parte una sola volta, entrando nel livello.
@@ -60,7 +62,8 @@ namespace HapticResearch.EditorTools
             EditorSceneManager.SaveScene(scene, MenuScenePath);
             AssetDatabase.SaveAssets();
             UpdateBuildSceneList();
-            Debug.Log("[MenuSetup] Fatto: scena menu (UI + voce) pronta e Scene List = MainMenu, Level1, Labyrinth, Level3, Level3_Memory.");
+            Debug.Log("[MenuSetup] Fatto: scena menu (UI + voce) pronta, opzioni = Level1, Labyrinth, Level3_Memory " +
+                      "(la colazione resta nella Scene List ma scollegata dal menu).");
         }
 
         private static MainMenuSceneController CreateController()
@@ -72,25 +75,33 @@ namespace HapticResearch.EditorTools
 
         // Fuori da CreateController apposta: la scena del menu esiste gia' da tempo, quindi
         // su una macchina qualsiasi CreateController non viene mai chiamato. Se la lista
-        // dei livelli si aggiornasse solo li', il bottone "3. Colazione" costruito da
+        // dei livelli si aggiornasse solo li', il bottone "3. Memory tattile" costruito da
         // BuildUi punterebbe a un indice che non esiste e non farebbe niente.
         private static void ConfigureLevels(MainMenuSceneController controller)
         {
             // Config livelli via SerializedObject (= compilare l'Inspector a mano).
             var so = new SerializedObject(controller);
             var levels = so.FindProperty("levels");
-            levels.arraySize = 4;
+            levels.arraySize = 3;
 
             SetLevel(levels.GetArrayElementAtIndex(0), "level1", "Level1_ShapeRecognition", KeyCode.Alpha1,
                 new[] { "uno", "livello uno", "forme", "riconoscimento forme", "riconoscimento delle forme" });
             SetLevel(levels.GetArrayElementAtIndex(1), "level2", "Labyrinth", KeyCode.Alpha2,
                 new[] { "due", "livello due", "labirinto" });
-            SetLevel(levels.GetArrayElementAtIndex(2), "level3", "Level3_Breakfast", KeyCode.Alpha3,
-                new[] { "tre", "livello tre", "colazione" });
-            // Alternativa alla colazione: stesso "livello tre", l'operatore sceglie quale
-            // far giocare. L'id diverso tiene separate le due scene nei log.
-            SetLevel(levels.GetArrayElementAtIndex(3), "level3_memory", "Level3_Memory", KeyCode.Alpha4,
-                new[] { "quattro", "livello quattro", "memory", "memory tattile" });
+            // Il Level 3 ufficiale e' il MEMORY TATTILE. L'id resta 'level3_memory' (non
+            // 'level3') perche' e' anche il LevelId del MemoryManager e la chiave della
+            // battuta di conferma: cosi' nei log resta scritto quale dei due livelli tre
+            // ha giocato il partecipante.
+            SetLevel(levels.GetArrayElementAtIndex(2), "level3_memory", "Level3_Memory", KeyCode.Alpha3,
+                new[] { "tre", "livello tre", "memory", "memory tattile" });
+
+            // La COLAZIONE e' scollegata dal menu, non cancellata: scena, script, tool e
+            // asset restano interi, e resta nella Scene List (si apre e si prova in
+            // editor). Per rimetterla fra le opzioni: alza arraySize, scommenta la riga
+            // qui sotto scegliendo un tasto libero, aggiungi il suo bottone in BuildUi e
+            // rigenera 'menu_main' (il testo della battuta elenca le opzioni).
+            // SetLevel(levels.GetArrayElementAtIndex(3), "level3", "Level3_Breakfast", KeyCode.Alpha4,
+            //     new[] { "quattro", "livello quattro", "colazione" });
 
             so.ApplyModifiedProperties();
         }
@@ -144,22 +155,21 @@ namespace HapticResearch.EditorTools
                 new Color(1f, 1f, 1f, 0.85f), -420f, new Vector2(1400f, 50f));
 
             // Bottoni livello: stessa azione di voce e tasti (SelectLevelByIndex).
-            // Quattro bottoni: la fila si stringe (76 px, passo 85) e resta sopra i crediti
-            // ancorati in fondo alla pagina.
-            AddLevelButton(canvasGo.transform, controller, 0, "1. Riconoscimento delle forme", -490f);
-            AddLevelButton(canvasGo.transform, controller, 1, "2. Labirinto", -575f);
-            AddLevelButton(canvasGo.transform, controller, 2, "3. Colazione", -660f);
-            AddLevelButton(canvasGo.transform, controller, 3, "3b. Memory tattile", -745f);
+            // Tre bottoni (88 px, passo 100): l'indice deve combaciare con la posizione
+            // nella lista di ConfigureLevels, non col numero stampato sull'etichetta.
+            AddLevelButton(canvasGo.transform, controller, 0, "1. Riconoscimento delle forme", -500f);
+            AddLevelButton(canvasGo.transform, controller, 1, "2. Labirinto", -600f);
+            AddLevelButton(canvasGo.transform, controller, 2, "3. Memory tattile", -700f);
 
             // Bottone secondario: ripete l'annuncio vocale delle opzioni.
             var repeatBtn = AddButton(canvasGo.transform, "RepeatButton", "Ripeti annuncio vocale  (R)", 26,
-                -835f, new Vector2(520f, 64f), UnibsBlueLight);
+                -800f, new Vector2(520f, 64f), UnibsBlueLight);
             UnityEventTools.AddVoidPersistentListener(repeatBtn.onClick, controller.AnnounceOptions);
 
             // Suggerimento per l'operatore su cosa puo' dire il partecipante.
             AddText(canvasGo.transform, "VoiceHint",
-                "Il partecipante può dire:  «uno», «due», «tre», «quattro» oppure «ripeti»", 24,
-                FontStyle.Italic, new Color(1f, 1f, 1f, 0.7f), -905f, new Vector2(1400f, 40f));
+                "Il partecipante può dire:  «uno», «due», «tre» oppure «ripeti»", 24,
+                FontStyle.Italic, new Color(1f, 1f, 1f, 0.7f), -880f, new Vector2(1400f, 40f));
 
             // Crediti in fondo alla pagina.
             var credits = NewRect("Credits", canvasGo.transform);
@@ -178,7 +188,7 @@ namespace HapticResearch.EditorTools
 
         private static void AddLevelButton(Transform parent, MainMenuSceneController controller, int index, string label, float y)
         {
-            var btn = AddButton(parent, $"LevelButton{index + 1}", label, 36, y, new Vector2(720f, 76f), Color.white);
+            var btn = AddButton(parent, $"LevelButton{index + 1}", label, 36, y, new Vector2(720f, 88f), Color.white);
             UnityEventTools.AddIntPersistentListener(btn.onClick, controller.SelectLevelByIndex, index);
         }
 

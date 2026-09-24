@@ -5,7 +5,7 @@
   "find_sfera": "Trova la sfera.",
   "find_prisma": "Trova il prisma.",
   "menu_welcome": "Benvenuto nel gioco delle forme tattili dell’Università di Brescia. Quando sei pronto, premi Invio, oppure dì: avvia, per iniziare il livello riconoscimento forme. Premi R per riascoltare questo messaggio.",
-  "menu_main": "Menu principale. Dì: uno, per il livello riconoscimento delle forme. Dì: due, per il livello labirinto. Dì: tre, per il livello colazione. Dì: quattro, per il memory tattile. Puoi anche premere i tasti da uno a quattro sulla tastiera. Dì: ripeti, per riascoltare le opzioni.",
+  "menu_main": "Menu principale. Dì: uno, per il livello riconoscimento delle forme. Dì: due, per il livello labirinto. Dì: tre, per il memory tattile. Puoi anche premere i tasti uno, due o tre sulla tastiera. Dì: ripeti, per riascoltare le opzioni.",
   "menu_start_level1": "Avvio il livello riconoscimento delle forme.",
   "menu_start_level2": "Avvio il livello labirinto.",
   "menu_start_level3": "Livello tre: la colazione.",
