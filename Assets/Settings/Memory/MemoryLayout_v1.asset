@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b4d571c97a0d41d4a192dc844db881f, type: 3}
+  m_Name: MemoryLayout_v1
+  m_EditorClassIdentifier: Assembly-CSharp::HapticResearch.Memory.MemoryLayoutAsset
+  layoutId: memory_v1
+  columns: 4
+  rows: 3
+  tileSize: 0.08
+  tileGap: 0.02
+  tileTopY: 0.86
+  tileThickness: 0.004
+  centerX: 0
+  centerZ: 0.2
+  participantYaw: 180
+  nearEdgeZ: 0.4
+  tableHalfX: 0.75
+  maxReach: 0.4
+  coveredStiffness: 0.5
+  signatures:
+  - id: roccia_dura
+    label: Roccia dura
+    texture: 10
+    textureVolume: 100
+    stiffness: 0.9
+    role: 0
+  - id: roccia_morbida
+    label: Roccia morbida
+    texture: 10
+    textureVolume: 100
+    stiffness: 0.2
+    role: 0
+  - id: tessuto_duro
+    label: Tessuto duro
+    texture: 9
+    textureVolume: 100
+    stiffness: 0.9
+    role: 0
+  - id: tessuto_morbido
+    label: Tessuto morbido
+    texture: 9
+    textureVolume: 100
+    stiffness: 0.2
+    role: 0
+  - id: metallo_duro
+    label: Metallo duro
+    texture: 6
+    textureVolume: 100
+    stiffness: 0.9
+    role: 0
+  - id: metallo_morbido
+    label: Metallo morbido
+    texture: 6
+    textureVolume: 100
+    stiffness: 0.2
+    role: 0
+  warmupSignatureIds:
+  - roccia_dura
+  - roccia_morbida
+  - tessuto_duro
+  warmupTiles: 01000000020000000500000006000000090000000a000000
+  dwellSeconds: 1
+  dwellRadius: 0.015
+  dwellQuietSeconds: 0.25
+  mismatchDelay: 1.5
+  minThermalDwellSeconds: 2.5
