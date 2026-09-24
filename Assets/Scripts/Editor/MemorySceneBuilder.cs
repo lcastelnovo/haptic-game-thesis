@@ -69,11 +69,28 @@ namespace HapticResearch.EditorTools
 
         // Asset + scena, da riga di comando:
         //   Unity -batchmode -quit -projectPath . -executeMethod HapticResearch.EditorTools.MemorySceneBuilder.GenerateHeadless
+        // TryGenerateScene scrive gia' gli asset: qui non si richiama EnsureLayouts.
         public static void GenerateHeadless()
         {
-            if (!EnsureLayouts(out string report)) { Debug.LogError("[MemoryBuilder] " + report); EditorApplication.Exit(1); return; }
+            if (!TryGenerateScene(out string report)) { Debug.LogError("[MemoryBuilder] " + report); EditorApplication.Exit(1); return; }
             Debug.Log("[MemoryBuilder] " + report);
-            if (!TryGenerateScene(out report)) { Debug.LogError("[MemoryBuilder] " + report); EditorApplication.Exit(1); return; }
+        }
+
+        // Scena gia' esistente, da riga di comando: come "Rigenera griglia", senza aprire l'editor.
+        // Gli asset dei layout NON si toccano (per quelli c'e' "Genera asset layout").
+        //   Unity -batchmode -quit -projectPath . -executeMethod HapticResearch.EditorTools.MemorySceneBuilder.RegenerateHeadless
+        public static void RegenerateHeadless()
+        {
+            string path = MemorySetupTool.ScenePath;
+            if (string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets)))
+            {
+                Debug.LogError($"[MemoryBuilder] '{path}' non esiste: 'Genera scena memory' prima.");
+                EditorApplication.Exit(1);
+                return;
+            }
+            var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+            if (!UpdateSceneContent(scene, out string report)) { Debug.LogError("[MemoryBuilder] " + report); EditorApplication.Exit(1); return; }
+            EditorSceneManager.SaveScene(scene);
             Debug.Log("[MemoryBuilder] " + report);
         }
 
@@ -81,15 +98,18 @@ namespace HapticResearch.EditorTools
 
         private static bool TryGenerateScene(out string report)
         {
-            if (!EnsureLayouts(out report)) return false;
-
+            // Prima il controllo sulla scena, poi gli asset: se la scena c'e' gia' si esce
+            // senza aver riscritto i layout (magari ritoccati a mano dopo il primo test).
             string path = MemorySetupTool.ScenePath;
             bool exists = !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(path, AssetPathToGUIDOptions.OnlyExistingAssets));
             if (exists)
             {
-                report = $"'{path}' esiste gia': NON la tocco. Aprila e lancia 'HapticResearch/Level 3 Memory/Rigenera griglia'.";
+                report = $"'{path}' esiste gia': NON la tocco, e non tocco nemmeno gli asset dei layout. " +
+                         "Aprila e lancia 'HapticResearch/Level 3 Memory/Rigenera griglia'.";
                 return false;
             }
+
+            if (!EnsureLayouts(out report)) return false;
             if (!AssetDatabase.CopyAsset(TemplateScenePath, path))
             {
                 report = $"Copia da '{TemplateScenePath}' a '{path}' fallita.";
