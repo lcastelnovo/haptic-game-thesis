@@ -27,7 +27,7 @@ Niente CI, niente Makefile. Aprire da Unity Hub.
 - Scene di gioco (Scene List, in ordine): `MainMenu.unity` → `Level1_ShapeRecognition.unity`
   → `Labyrinth.unity` (Level 2) → `Level3_Breakfast.unity` (Level 3). Ognuna si cabla con il suo tool editor (menu
   `HapticResearch/...`, anche headless con `-executeMethod`): `MenuSceneSetupTool`,
-  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. `SceneDumpTool` scrive un dump testuale di
+  `Level1SetupTool`, `LabyrinthSetupTool`, `Level3SetupTool`. Alternativa al Level 3: `Level3_Memory.unity` (memory tattile), scelta dall'operatore nel menu (tasto 4). Tool: `MemorySceneBuilder` / `MemorySetupTool`. `SceneDumpTool` scrive un dump testuale di
   una scena (gerarchia, componenti, campi) per confrontarle senza aprire l'editor
 - Build: File → Build Settings → PC Standalone
 - Runtime aptico richiede WEART Middleware avviato + TouchDIVER Pro connesso. Senza
@@ -305,6 +305,28 @@ quali), «ho finito» chiude il livello — lo stesso del tasto **Fine** dell'op
 L'isteresi termica, il comportamento dello scheduler delle richieste e i controlli sul dato
 di scena si verificano con `cd Tools/ExplorationTest && dotnet run`.
 
+### Memory tattile (`Assets/Scripts/Memory/`) - Level 3 alternativo
+
+Alternativa alla colazione, pronta nel caso il guanto non regga il realismo di "questa e'
+una tazza". Le sensazioni sono un **codice astratto**, come il braille: servono solo che le
+firme si distinguano e che il partecipante se le ricordi. Spec:
+`docs/superpowers/specs/2026-09-23-level3-memory-tattile-design.md`.
+
+Griglia 4x3 di tessere piatte da 8 cm; la firma e' texture + stiffness. Si gira una tessera
+tenendoci il **dito fermo ~1 s** (tono che sale, clic); l'operatore puo' girarla con **G**.
+Fase 1 (riscaldamento): 3 coppie **scoperte**, misura la discriminazione pura. Fase 2: 6
+coppie **coperte**, misura la memoria. I `mismatch` nel log portano `partnerSeenBefore` e
+`secondSeenBefore` per separare errore di memoria ed errore di percezione.
+
+- `MemoryLayoutAsset` in `Assets/Settings/Memory/`: **il dato dell'esperimento**. La
+  variante `MemoryLayout_Termico_v1` aggiunge il freddo ai due "metallo" e allunga la sosta a
+  3 s; la temperatura passa da `ThermalObjectCue` come nella colazione
+- `MemoryGridMap` / `DwellDetector` / `MemoryBoard` / `MemoryLayoutValidator`: classi pure,
+  provate con `cd Tools/MemoryTest && dotnet run`. Se tocchi la griglia, rilancia il test
+- La griglia **si rigenera**: `HapticResearch/Level 3 Memory/Rigenera griglia`
+- Le tessere sono **visivamente identiche** in ogni stato tranne "fuori gioco": l'operatore
+  non deve vedere dov'e' la coppia
+
 ### Grid & Objects
 - `BuildGrid` (`Assets/Scripts/Grid/`): snap grid 13×8, cell size 0.075m, niente overlap
 - `GrabbableObject` / `TouchableObject` (`Assets/Scripts/Objects/`): physics grab con
@@ -409,7 +431,8 @@ da container, niente collider/rigidbody sul parent.
 | F3 | Mostra / nasconde HUD operatore |
 | Invio / R | Avvia (o riavvia) livello / ripeti annuncio |
 | N | Livello successivo (Level 1 e Level 2) o torna al menu (Level 3), solo a livello completato |
-| Fine | Chiude il livello 3 (l'esplorazione non finisce da sola) |
+| G | Gira la tessera sotto il dito (memory tattile) |
+| Fine | Chiude il livello 3 (colazione o memory) |
 | M | Muta / riattiva il microfono |
 | K | Avvia la taratura termica (Level 2), Esc la interrompe |
 | C / F | Risposta "caldo" / "freddo" in taratura, se il microfono non c'è |
