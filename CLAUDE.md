@@ -100,6 +100,13 @@ Simulazione bimanuale con articolazione per-dito:
 - `HandCloseController`: selezione dita (0-5) e chiusura via scroll
 - `HandGrabController`: left grab/press, right destroy, S/D ruota in mano
 - `FingerController` / `ThumbController`: interpolazione giunti tra pose open/closed
+- `GloveGraspDetector` + `GraspLatch`: presa col guanto vero. Il TouchDIVER non ha un
+  bottone, la presa si ricava dalla chiusura delle dita: la mano deve prima **aprirsi**
+  davvero (cancello anti presa-fantasma per il guanto appoggiato e dimenticato), poi
+  chiudersi. **Finché la stretta dura, la forma in mano si rilegge a ogni frame**: se la
+  si decidesse solo all'istante della chiusura, una mano che si chiude una volta sulla
+  forma su cui riposa se la porterebbe dietro per tutto il livello e ogni altra risposta
+  risulterebbe sbagliata. La macchina a stati è C# puro: `cd Tools/GraspTest && dotnet run`
 
 Lo `WeArtHandController` ufficiale del SDK è **intenzionalmente disabilitato**: il
 movimento mano lo fanno i nostri script. L'output aptico passa comunque per

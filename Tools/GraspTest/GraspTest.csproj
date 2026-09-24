@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Banco di prova della presa col guanto (GraspLatch), FUORI da Unity.
+
+        cd Tools/GraspTest && dotnet run
+
+    Perche' esiste: la presa col TouchDIVER si ricava dalla chiusura delle dita, e un
+    errore li' non si vede ne' in Scene view ne' in Console. Si vede a sessione finita,
+    con un partecipante che ha tenuto in mano la forma giusta e si e' sentito rispondere
+    "sbagliato" per tutto il livello.
+
+    Come gli altri Tools/*Test non serve nessuna DLL di Unity: GraspLatch e' C# puro.
+    Se un giorno servisse un 'using UnityEngine', quel pezzo va in GloveGraspDetector.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <AssemblyName>GraspTest</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Assets/Scripts/Hands/GraspLatch.cs" />
+  </ItemGroup>
+
+</Project>

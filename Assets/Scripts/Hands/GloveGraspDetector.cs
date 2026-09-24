@@ -54,13 +54,14 @@ namespace HapticResearch.Hands
         [SerializeField] private bool debugLog = true;
 
         private WeArtGraspBridge bridge;
-        private RecognizableShape held; // forma attualmente segnata nel bridge da QUESTA mano
-        private bool armed;             // la mano si e' aperta davvero: presa pronta (parte NON armata)
+        private GraspLatch<RecognizableShape> latch; // apri->chiudi e forma in mano (provata in Tools/GraspTest)
         private bool wasConnected;
         private int debugTick;
 
         void Awake()
         {
+            latch = new GraspLatch<RecognizableShape>(minFingersClosed);
+
             // grabPoint: riusa quello di HandGrabController se non assegnato.
             if (grabPoint == null)
             {
@@ -100,52 +101,47 @@ namespace HapticResearch.Hands
             // e qui NON dobbiamo azzerare lo slot che ha impostato la demo.
             if (!connected)
             {
-                ForgetLocalOnly();
-                armed = false; // al ritorno del device serve un vero apri -> chiudi
+                latch.Reset(); // al ritorno del device serve un vero apri -> chiudi
                 return;
             }
 
             int closed = CountClosedFingers();
-            bool closedEnough = closed >= minFingersClosed;
-            // Mano "davvero aperta" = meno di minFingersClosed dita sopra la soglia BASSA.
-            // E' il cancello anti-fantasma: serve scendere fin qui per armare la presa.
-            bool openEnough = CountFingersAbove(openThreshold) < minFingersClosed;
 
-            if (held == null)
-            {
-                // ISTERESI apri -> chiudi: la presa scatta solo se la mano si e' prima
-                // aperta davvero (armed) e poi chiusa. Le oscillazioni di un guanto
-                // appoggiato attorno alla soglia di chiusura non scendono mai sotto
-                // openThreshold, quindi non armano mai: niente prese fantasma.
-                if (openEnough) armed = true;
+            // La forma sotto la mano si rilegge A OGNI FRAME, anche a stretta gia' in corso:
+            // e' cio' che tiene "quello che il gioco crede di avere in mano" agganciato a
+            // dove sta davvero la mano. Decidendola solo all'istante della chiusura, una
+            // mano che si chiude una volta sulla forma su cui riposa se la porta dietro per
+            // tutto il livello e ogni altra risposta risulta sbagliata.
+            var nearest = FindShapeNearHand();
 
-                if (armed && closedEnough)
-                {
-                    armed = false; // presa consumata: per riprovare bisogna riaprire la mano
-                    var shape = FindShapeNearHand();
-                    if (shape != null)
-                    {
-                        held = shape;
-                        bridge.SetGrasp(shape.gameObject, isLeftHand);
-                        if (debugLog) Debug.Log($"[GloveGrasp {Side}] AFFERRA '{shape.name}' (dita chiuse: {closed})");
-                    }
-                    else if (debugLog)
-                        Debug.Log($"[GloveGrasp {Side}] {closed} dita chiuse ma nessuna forma entro {contactRadius} m dal grabPoint");
-                }
-                else if (debugLog && (++debugTick % 120 == 0))
-                    Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed} - {(armed ? "presa pronta" : "apri la mano per armare la presa")}");
-            }
+            // Lo slot e' ancora nostro? Dopo ogni conferma il manager lo azzera apposta,
+            // per pretendere un nuovo gesto prima di riprendere una forma.
+            var before = latch.Held;
+            bool slotIntact = before == null || CurrentSlot() == before.gameObject;
+
+            var after = latch.Step(closed, CountFingersAbove(openThreshold), nearest, slotIntact);
+            if (after != before) ApplyToBridge(before, after, closed);
+
+            if (!debugLog || (++debugTick % 120 != 0)) return;
+            if (!latch.SessionActive)
+                Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed} - {(latch.Armed ? "presa pronta" : "apri la mano per armare la presa")}");
+            else if (latch.Held == null)
+                Debug.Log($"[GloveGrasp {Side}] mano chiusa ma nessuna forma entro {contactRadius} m dal grabPoint {(grabPoint != null ? grabPoint.position.ToString("0.00") : "(assente)")}");
+        }
+
+        // Riporta nel bridge il cambio di forma deciso dalla macchina a stati.
+        private void ApplyToBridge(RecognizableShape before, RecognizableShape after, int closed)
+        {
+            // Tolgo dallo slot solo cio' che ci avevo messo io: se nel frattempo se n'e'
+            // impossessato qualcun altro non lo tocco.
+            if (before != null && CurrentSlot() == before.gameObject) bridge.ClearGrasp(isLeftHand);
+            if (after != null) bridge.SetGrasp(after.gameObject, isLeftHand);
+
+            if (!debugLog) return;
+            if (after != null)
+                Debug.Log($"[GloveGrasp {Side}] AFFERRA '{after.name}' (dita chiuse: {closed})");
             else
-            {
-                // Rilascio quando le dita si riaprono, o se lo slot del bridge non e' piu' la mia forma
-                // (es. il manager ha confermato/azzerato la partita).
-                bool stillMine = CurrentSlot() == held.gameObject;
-                if (!closedEnough || !stillMine)
-                {
-                    if (debugLog) Debug.Log($"[GloveGrasp {Side}] rilascia (dita: {closed}, ancora mia: {stillMine})");
-                    ReleaseIfHolding();
-                }
-            }
+                Debug.Log($"[GloveGrasp {Side}] rilascia '{(before != null ? before.name : "-")}' (dita chiuse: {closed})");
         }
 
         private string Side => isLeftHand ? "SX" : "DX";
@@ -153,17 +149,6 @@ namespace HapticResearch.Hands
         // Espone lato e posizione del punto di presa per la diagnostica (GraspDebugPanel).
         public bool IsLeftHand => isLeftHand;
         public Vector3? GrabPointPosition => grabPoint != null ? grabPoint.position : (Vector3?)null;
-
-        // Rilascia nel bridge la presa impostata da questa mano.
-        private void ReleaseIfHolding()
-        {
-            if (held == null) return;
-            if (CurrentSlot() == held.gameObject) bridge.ClearGrasp(isLeftHand);
-            held = null;
-        }
-
-        // Dimentica solo lo stato locale, SENZA toccare il bridge (usato in demo/device assente).
-        private void ForgetLocalOnly() => held = null;
 
         private GameObject CurrentSlot() => isLeftHand ? bridge.LeftGrasped : bridge.RightGrasped;
 
