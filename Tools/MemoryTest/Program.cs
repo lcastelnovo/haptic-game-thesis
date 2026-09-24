@@ -333,6 +333,15 @@ static class Program
         { var l = ValidInfo(); l.Signatures[1] = new SignatureInfo("gemella", 10, 100f, 0.9f, false); Rejected(l, "due firme con parametri identici"); }
         { var l = ValidInfo(); l.Signatures[0] = new SignatureInfo("roccia_dura", 10, 0f, 0.9f, false); Rejected(l, "firma senza texture (si confonde con la coperta)"); }
         { var l = ValidInfo(); l.Signatures.Add(new SignatureInfo("settima", 12, 100f, 0.5f, false)); Rejected(l, "sette coppie in dodici tessere"); }
+        {
+            // Griglia 4x4: le sette coppie ci entrano, ma "mancano N coppie" arriva a sei.
+            var l = ValidInfo();
+            l.Rows = 4;
+            l.Signatures.Add(new SignatureInfo("settima", 12, 100f, 0.5f, false));
+            Rejected(l, "sette coppie in sedici tessere (voci fino a sei)");
+            l.Signatures.RemoveAt(6);
+            Check(MemoryLayoutValidator.Validate(l, out string e4), $"sei coppie in sedici tessere: valido ({e4})");
+        }
         { var l = ValidInfo(); l.WarmupIds[2] = "inesistente"; Rejected(l, "riscaldamento con una firma inesistente"); }
         { var l = ValidInfo(); l.WarmupTiles.RemoveAt(5); Rejected(l, "riscaldamento con 5 tessere per 3 coppie"); }
         { var l = ValidInfo(); l.WarmupTiles[5] = 1; Rejected(l, "riscaldamento con una tessera ripetuta"); }

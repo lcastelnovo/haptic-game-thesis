@@ -41,6 +41,9 @@ namespace HapticResearch.Memory
     // sessione con un partecipante davanti.
     public static class MemoryLayoutValidator
     {
+        // Numero massimo di coppie che MemoryManager sa pronunciare (voice_lines.json).
+        public const int MaxSpokenPairs = 6;
+
         // Coordinate del partecipante -> coordinate del tavolo, ruotando attorno a Y come
         // fa Unity con Quaternion.Euler(0, yaw, 0). Scritta a mano perche' Quaternion
         // chiama il runtime nativo, che fuori dall'editor non c'e'.
@@ -89,6 +92,14 @@ namespace HapticResearch.Memory
             if (2 * l.Signatures.Count > tiles)
             {
                 error = $"{l.Signatures.Count} coppie non entrano in {tiles} tessere";
+                return false;
+            }
+            // "Quante coppie mancano" ha battute registrate fino a sei (level3m_missing_0..6):
+            // con piu' coppie il partecipante sentirebbe un numero sbagliato.
+            if (l.Signatures.Count > MaxSpokenPairs)
+            {
+                error = $"{l.Signatures.Count} coppie, ma le battute 'mancano N coppie' arrivano a {MaxSpokenPairs}: " +
+                        "aggiungi le voci level3m_missing_* prima di allargare il layout";
                 return false;
             }
 
