@@ -7,6 +7,7 @@ using WeArt.Messages;
 using HapticResearch.Levels;
 using HapticResearch.Experiment;
 using HapticResearch.Hands;
+using HapticResearch.Audio;
 
 namespace HapticResearch.UI
 {
@@ -83,6 +84,16 @@ namespace HapticResearch.UI
         [TextArea(1, 3)]
         [SerializeField] private string footerDemoText = "Demo: mouse muove | click chiude | G afferra | Q/E su/giu'";
 
+        [Header("Menu principale")]
+        [Tooltip("Scena del menu principale (deve stare nella Scene List).")]
+        [SerializeField] private string mainMenuScene = "MainMenu";
+
+        [Tooltip("Battuta letta prima di tornare al menu.")]
+        [SerializeField] private string menuVoiceKey = "menu_back";
+
+        [Tooltip("Secondi entro cui ripremere il bottone per confermare il ritorno al menu a livello in corso.")]
+        [SerializeField] private float menuConfirmSeconds = 3f;
+
         [Header("Vive Tracker")]
         [Tooltip("Un tracker conta come attivo se il suo target si e' mosso di piu' di questa soglia (m) negli ultimi secondi.")]
         [SerializeField] private float trackerMoveThreshold = 0.003f;
@@ -94,6 +105,8 @@ namespace HapticResearch.UI
         private HandDemoModeController demo;
         private ViveTrackerManager trackers;
         private float pillBottom;
+        private float menuConfirmUntil = -1f; // a livello in corso il primo clic arma, il secondo conferma
+        private bool leavingToMenu;
 
         // Stato hardware. Gli handler del SDK possono girare fuori dal main thread: qui si
         // scrivono solo stringhe e int (scritture atomiche); testi e colori si compongono in OnGUI.
@@ -384,6 +397,15 @@ namespace HapticResearch.UI
             by -= set.sectionGap;
 
             float btnGap = S(10f);
+
+            by -= set.secondaryH;
+            bool confirming = Time.unscaledTime < menuConfirmUntil;
+            GUI.enabled = !leavingToMenu;
+            if (GUI.Button(new Rect(x, by, cw, set.secondaryH), confirming ? "Conferma: torna al menu" : "Menu principale", set.secondary))
+                OnMainMenuClicked();
+            GUI.enabled = true;
+            by -= btnGap;
+
             if (canGoNext)
             {
                 by -= set.secondaryH;
@@ -479,6 +501,38 @@ namespace HapticResearch.UI
         }
 
         // Altezza totale richiesta da sidebar completa con queste misure (per scegliere le compatte).
+        // Torna al menu principale. A livello in corso (o in calibrazione) serve un secondo
+        // clic entro menuConfirmSeconds: un clic sbagliato non deve buttare via una sessione.
+        private void OnMainMenuClicked()
+        {
+            if (leavingToMenu) return;
+            bool busy = level.IsRunning || LevelController.IsCalibrating;
+            if (busy && Time.unscaledTime >= menuConfirmUntil)
+            {
+                menuConfirmUntil = Time.unscaledTime + menuConfirmSeconds;
+                return;
+            }
+            menuConfirmUntil = -1f;
+
+            if (string.IsNullOrEmpty(mainMenuScene) || !Application.CanStreamedLevelBeLoaded(mainMenuScene))
+            {
+                Debug.LogWarning($"[OperatorHud] Scena '{mainMenuScene}' non caricabile (manca dalla Scene List?).");
+                return;
+            }
+
+            leavingToMenu = true;
+            var logger = SessionLogger.Instance;
+            if (logger != null)
+                logger.Log(level.LevelId, "return_to_menu",
+                    $"{{\"wasRunning\":{(level.IsRunning ? "true" : "false")},\"wasComplete\":{(level.IsComplete ? "true" : "false")}}}");
+
+            // Conferma parlata per il partecipante, poi dissolvenza (come "avanti").
+            var nm = NarrationManager.Instance;
+            if (nm != null && nm.Has(menuVoiceKey)) nm.Speak(menuVoiceKey);
+            float deadline = Time.time + 5f;
+            SceneFader.LoadSceneWithFade(mainMenuScene, () => nm == null || !nm.IsSpeaking || Time.time >= deadline);
+        }
+
         private float NeededHeight(StyleSet set, float cw, string footer, bool canGoNext)
         {
             float role = string.IsNullOrEmpty(roleLabel) ? 0f : S(22f);
@@ -488,7 +542,7 @@ namespace HapticResearch.UI
                 + Mathf.Max(set.statusMin, set.status.CalcHeight(new GUIContent(level.StatusLine), cw - S(44f)) + S(20f)) + set.sectionGap
                 + S(26f) + 4f * set.rowHeight;
             float bottom = Pad + set.footer.CalcHeight(new GUIContent(footer), cw) + set.sectionGap
-                + (canGoNext ? set.secondaryH + S(10f) : 0f) + set.secondaryH + S(10f) + set.primaryH + set.sectionGap;
+                + (canGoNext ? set.secondaryH + S(10f) : 0f) + 2f * (set.secondaryH + S(10f)) + set.primaryH + set.sectionGap;
             return top + bottom;
         }
 

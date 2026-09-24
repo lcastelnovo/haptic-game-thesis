@@ -378,7 +378,7 @@ coppie **coperte**, misura la memoria. I `mismatch` nel log portano `partnerSeen
   tutti i livelli, auto-installata nelle scene con un `LevelController` (non nel menu):
   sidebar a sinistra (logo, livello e titolo, stato, righe hardware in sola lettura dal
   SDK: middleware, TouchDIVER, calibrazione, Vive Tracker; bottoni Avvia/Ripeti/livello
-  successivo; footer tasti), pill in alto a destra (mani demo ON/OFF cliccabile,
+  successivo/Menu principale, che a livello in corso chiede un secondo clic di conferma; footer tasti), pill in alto a destra (mani demo ON/OFF cliccabile,
   partecipante, timer). Le camere su Display 1 vengono ristrette a destra della
   sidebar. **F3** nasconde l'HUD. I pannelli storici (OperatorControls, toggle demo,
   indicatore voce, watermark) si spengono da soli quando l'HUD è attivo
