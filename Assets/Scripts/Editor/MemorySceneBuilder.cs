@@ -142,6 +142,8 @@ namespace HapticResearch.EditorTools
             if (layout == null) { report = $"Manca '{LayoutPath}': 'Genera asset layout' prima."; return false; }
             if (!layout.Validate(out string error)) { report = $"Layout '{layout.LayoutId}' non valido: {error}"; return false; }
 
+            string disabled = DisableTemplateProps(scene, tableRoot);
+
             var root = ResetChildRoot(tableRoot.transform, GridRootName);
             // Il root E' il sistema del partecipante: centro della griglia sul piano delle
             // tessere, ruotato di participantYaw. MemoryManager ragiona nelle sue coordinate.
@@ -162,24 +164,71 @@ namespace HapticResearch.EditorTools
             }
             bool tilesOk = MemorySetupTool.ValidateTiles(asWarnings: false);
             report = $"{grid.TileCount} tessere generate sotto '{TableRootName}/{GridRootName}' dal layout '{layout.LayoutId}'. " +
-                     $"Validazione tessere: {(tilesOk ? "OK" : "PROBLEMI, vedi Console")}.";
+                     $"Validazione tessere: {(tilesOk ? "OK" : "PROBLEMI, vedi Console")}. " +
+                     $"Forme demo del template spente: {disabled}.";
             return true;
+        }
+
+        // Il template ViveTrackerScene porta sul tavolo le forme del Level 1 (Cube, Cylinder,
+        // Prism, Star): alte ~10 cm, touchable con texture e durezza accese, e il Cylinder
+        // copre proprio le tessere 9 e 10 del riscaldamento. Il dito le sentirebbe insieme
+        // alle tessere, e in fase 2 due coperte non sarebbero piu' neutre. Si SPENGONO, non
+        // si cancellano: gli oggetti del template restano recuperabili (niente guid persi).
+        // Criterio: ogni root diverso da 'Table' che contiene un WeArtTouchableObject.
+        private static string DisableTemplateProps(Scene scene, GameObject tableRoot)
+        {
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var go in scene.GetRootGameObjects())
+            {
+                if (go == tableRoot || !go.activeSelf) continue;
+                if (go.GetComponentsInChildren<WeArtTouchableObject>(true).Length == 0) continue;
+                Undo.RecordObject(go, "Spegni forme demo del template");
+                go.SetActive(false);
+                names.Add(go.name);
+            }
+            string list = names.Count == 0 ? "nessuna" : string.Join(", ", names);
+            if (names.Count > 0) Debug.Log($"[MemoryBuilder] Spente le forme demo del template: {list}.");
+            return list;
         }
 
         // --- Tessere ----------------------------------------------------------------------
 
+        // Stesso schema delle piastrelle del labirinto (MazeGeometryBuilder.BuildTiles +
+        // MazeMap.CellVolume): il VOLUME trigger va dal piano del tavolo (0.85) a 10 cm sopra
+        // (0.95, la cima dei muri del labirinto), perche' la punta dell'indice sta a ~0.94 e
+        // col tracker puo' anche scendere sotto il piano; la parte VISIBILE resta la lastra
+        // piatta di sempre (top a 0.86). Con una lastra trigger di 4 mm sospesa a 0.856 il
+        // guanto non sentiva niente mentre la logica diceva "sulla tessera".
+        private const float TableTopY = 0.85f;
+        private const float TriggerHeight = 0.10f;
+        // Soglia della logica (MemoryManager.maxTipHeight): cima del trigger + ~1 cm di raggio
+        // del polpastrello. Sotto, il collider del dito tocca il trigger e il guanto sente la
+        // tessera; sopra, la mano e' sollevata e non gira niente. Il labirinto usa 0.97 con muri
+        // a 0.95; qui 1 cm basta: logica e guanto vedono il contatto nello stesso volume.
+        private const float MaxTipHeight = TableTopY + TriggerHeight + 0.01f;
+
         private static void BuildTile(Transform root, MemoryGridMap grid, int index, MemoryLayoutAsset layout)
         {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = $"Tessera_{index:00}";
+            var go = new GameObject($"Tessera_{index:00}");
             go.transform.SetParent(root, false);
             grid.Center(index, out float x, out float z);
-            // Il root sta alla quota del TOP: il cubo scende di mezzo spessore.
-            go.transform.localPosition = new Vector3(x, -layout.TileThickness * 0.5f, z);
-            go.transform.localScale = new Vector3(layout.TileSize, layout.TileThickness, layout.TileSize);
+            // Il root sta alla quota del TOP delle tessere: la tessera si appoggia li'.
+            go.transform.localPosition = new Vector3(x, 0f, z);
 
             // Il dito attraversa la tessera: la sensazione la danno i pad aptici.
-            go.GetComponent<Collider>().isTrigger = true;
+            var col = go.AddComponent<BoxCollider>();
+            col.isTrigger = true;
+            float bottom = TableTopY - layout.TileTopY;   // -0.01: dal piano del tavolo
+            col.center = new Vector3(0f, bottom + TriggerHeight * 0.5f, 0f);
+            col.size = new Vector3(layout.TileSize, TriggerHeight, layout.TileSize);
+
+            // Lastra visibile, senza collider: il cubo scende di mezzo spessore dal top.
+            var slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slab.name = "Lastra";
+            UnityEngine.Object.DestroyImmediate(slab.GetComponent<Collider>());
+            slab.transform.SetParent(go.transform, false);
+            slab.transform.localPosition = new Vector3(0f, -layout.TileThickness * 0.5f, 0f);
+            slab.transform.localScale = new Vector3(layout.TileSize, layout.TileThickness, layout.TileSize);
 
             // Rigidbody obbligatorio: il sistema aptico reagisce solo a oggetti che ce l'hanno.
             var body = go.AddComponent<Rigidbody>();
@@ -198,7 +247,7 @@ namespace HapticResearch.EditorTools
             var so = new SerializedObject(tile);
             so.FindProperty("index").intValue = index;
             so.FindProperty("touchable").objectReferenceValue = touchable;
-            so.FindProperty("tileRenderer").objectReferenceValue = go.GetComponent<Renderer>();
+            so.FindProperty("tileRenderer").objectReferenceValue = slab.GetComponent<Renderer>();
             so.ApplyModifiedPropertiesWithoutUndo();
 
             Undo.RegisterCreatedObjectUndo(go, "Genera tessera memory");
@@ -219,6 +268,7 @@ namespace HapticResearch.EditorTools
             so.FindProperty("layout").objectReferenceValue = layout;
             so.FindProperty("gridRoot").objectReferenceValue = gridRoot;
             so.FindProperty("tiles").arraySize = 0;   // si riempie da sola in Awake
+            so.FindProperty("maxTipHeight").floatValue = MaxTipHeight;   // coerente col trigger delle tessere
             LevelSceneWiring.SetIfEmpty(so, "profile", AssetDatabase.LoadAssetAtPath<HapticProfile>(ProfilePath));
             so.FindProperty("contactClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(ContactClipPath);
             so.FindProperty("dwellToneClip").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(DwellToneClipPath);

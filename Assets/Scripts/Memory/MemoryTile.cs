@@ -22,7 +22,7 @@ namespace HapticResearch.Memory
         [Tooltip("Se vuoto lo cerca su questo GameObject.")]
         [SerializeField] private WeArtTouchableObject touchable;
 
-        [Tooltip("Se vuoto lo cerca su questo GameObject. Si spegne solo quando la tessera e' fuori gioco.")]
+        [Tooltip("Se vuoto lo cerca fra i figli (la 'Lastra'). Si spegne solo quando la tessera e' fuori gioco.")]
         [SerializeField] private Renderer tileRenderer;
 
         public int Index => index;
@@ -30,7 +30,8 @@ namespace HapticResearch.Memory
         void Awake()
         {
             if (touchable == null) touchable = GetComponent<WeArtTouchableObject>();
-            if (tileRenderer == null) tileRenderer = GetComponent<Renderer>();
+            // La lastra visibile e' figlia: il GameObject della tessera porta solo il trigger.
+            if (tileRenderer == null) tileRenderer = GetComponentInChildren<Renderer>();
         }
 
         // Texture e Stiffness sono setter del SDK: assegnarli chiama gia'

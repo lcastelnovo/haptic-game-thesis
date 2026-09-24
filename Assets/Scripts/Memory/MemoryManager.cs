@@ -50,8 +50,11 @@ namespace HapticResearch.Memory
         [SerializeField] private List<MemoryTile> tiles = new List<MemoryTile>();
 
         [Header("Rilevamento")]
-        [Tooltip("Sopra questa altezza la mano e' sollevata dal tavolo e non tocca niente.")]
-        [SerializeField] private float maxTipHeight = 0.97f;
+        // Il trigger delle tessere va da 0.85 a 0.95 (come le piastrelle del labirinto): la
+        // soglia e' la sua cima + ~1 cm di polpastrello, cosi' la logica non gira una tessera
+        // che il guanto non sente. La riscrive MemorySceneBuilder.
+        [Tooltip("Sopra questa altezza la mano e' sollevata dal tavolo e non tocca niente (cima del trigger delle tessere + raggio del polpastrello).")]
+        [SerializeField] private float maxTipHeight = 0.96f;
 
         [Header("Canale termico (solo layout con firme termiche)")]
         [Tooltip("Se vuoto viene aggiunto a questo GameObject.")]
