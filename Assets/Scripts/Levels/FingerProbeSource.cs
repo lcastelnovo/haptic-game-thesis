@@ -24,11 +24,27 @@ namespace HapticResearch.Levels
             public bool left;
         }
 
+        // Quale dei due rig guardare.
+        //   Auto     - quello attivo secondo la demo. E' il default e il comportamento storico.
+        //   Tracked  - sempre le mani WEART mosse dai tracker, anche a demo accesa.
+        //   Demo     - sempre le mani mouse.
+        // Serve a chi lavora SOLO col guanto vero: quel codice gira gia' sotto la sua
+        // condizione (device connesso) e non deve misurare dalle mani del mouse, che
+        // restano ferme dove il cursore le ha lasciate mentre il partecipante muove la sua.
+        public enum Rig { Auto, Tracked, Demo }
+
         private readonly List<Probe> probes = new List<Probe>();
         private readonly List<Vector3> tips = new List<Vector3>();
         private bool collected;
         private bool demoState;
         private HandSideFlags sideFilter = HandSideFlags.Left | HandSideFlags.Right;
+        private Rig rigFilter = Rig.Auto;
+
+        public Rig RigFilter
+        {
+            get => rigFilter;
+            set => rigFilter = value;
+        }
 
         // Quali mani guardare. Il default sono ENTRAMBE, com'e' sempre stato: chi non
         // imposta niente (il labirinto) non cambia comportamento. Chi attua una mano sola
@@ -60,11 +76,14 @@ namespace HapticResearch.Levels
                 collected = true;
             }
 
+            // Con Auto comanda la demo (comportamento storico); altrimenti il rig e' imposto.
+            bool wantDemo = rigFilter == Rig.Demo || (rigFilter == Rig.Auto && demoOn);
+
             tips.Clear();
             foreach (var p in probes)
             {
                 if (p.tip == null || !p.tip.gameObject.activeInHierarchy) continue;
-                if (p.demo != demoOn) continue; // demo ON: solo mani mouse; OFF: solo mani WEART/tracker
+                if (p.demo != wantDemo) continue; // demo ON: solo mani mouse; OFF: solo mani WEART/tracker
                 if ((sideFilter & (p.left ? HandSideFlags.Left : HandSideFlags.Right)) == 0) continue;
                 tips.Add(p.tip.position);
             }

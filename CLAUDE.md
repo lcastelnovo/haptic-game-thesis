@@ -106,7 +106,16 @@ Simulazione bimanuale con articolazione per-dito:
   chiudersi. **Finché la stretta dura, la forma in mano si rilegge a ogni frame**: se la
   si decidesse solo all'istante della chiusura, una mano che si chiude una volta sulla
   forma su cui riposa se la porterebbe dietro per tutto il livello e ogni altra risposta
-  risulterebbe sbagliata. La macchina a stati è C# puro: `cd Tools/GraspTest && dotnet run`
+  risulterebbe sbagliata. La macchina a stati è C# puro: `cd Tools/GraspTest && dotnet run`.
+  **Da dove misura è altrettanto importante**: il componente sta sulle mani mouse
+  (`HandManager/...`), ma il partecipante muove le mani dei tracker (`WEART/Hands/...`).
+  Misurando dal proprio transform misurerebbe una mano ferma nella sua posizione di
+  partenza — per la destra a 5 cm dal cilindro e 11 cm dal cubo — e il cilindro
+  risulterebbe l'unica forma afferrabile di tutto il livello, con le dita vere che però
+  aprono e chiudono la presa. Perciò il punto di misura è la **punta dell'indice
+  tracciata**, via `FingerProbeSource` con `RigFilter = Tracked`. `WeArtGraspBridge`
+  registra anche **chi** ha scritto la presa (`sdk` / `guanto` / `demo`): compare nella
+  riga `SBAGLIATO` e nel pannello **F1**, che mostra pure il punto di misura in uso
 
 Lo `WeArtHandController` ufficiale del SDK è **intenzionalmente disabilitato**: il
 movimento mano lo fanno i nostri script. L'output aptico passa comunque per

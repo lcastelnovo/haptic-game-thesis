@@ -81,7 +81,7 @@ namespace HapticResearch.Debugging
             {
                 if (d == null) continue;
                 var gp = d.GrabPointPosition;
-                sb.AppendLine($"GrabPoint {(d.IsLeftHand ? "SX" : "DX")}: {(gp.HasValue ? gp.Value.ToString("0.00") : "n/d")}");
+                sb.AppendLine($"Punto di misura {(d.IsLeftHand ? "SX" : "DX")}: {(gp.HasValue ? gp.Value.ToString("0.00") : "n/d")} ({d.ProbeOrigin})");
             }
 
             // Mani demo: e' il discriminante fra i percorsi di presa. Demo ON spegne l'intero

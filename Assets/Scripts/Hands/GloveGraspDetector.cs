@@ -40,7 +40,7 @@ namespace HapticResearch.Hands
         [SerializeField, Range(1, 5)] private int minFingersClosed = 2;
 
         [Header("Rilevamento forma")]
-        [Tooltip("Punto della mano attorno a cui cercare la forma. Se vuoto usa il grabPoint di HandGrabController.")]
+        [Tooltip("Punto attorno a cui cercare la forma. Lasciare VUOTO: si usa la punta dell'indice della mano tracciata. Riempirlo solo per forzare un punto diverso.")]
         [SerializeField] private Transform grabPoint;
 
         [Tooltip("Raggio (m) entro cui una forma conta come 'in mano'. Come la demo: 0.08.")]
@@ -55,6 +55,9 @@ namespace HapticResearch.Hands
 
         private WeArtGraspBridge bridge;
         private GraspLatch<RecognizableShape> latch; // apri->chiudi e forma in mano (provata in Tools/GraspTest)
+        private FingerProbeSource trackedTip;        // punta dell'indice della mano dei tracker
+        private Transform fallbackPoint;             // ripiego se la punta tracciata non c'e'
+        private string probeOrigin = "-";            // da dove si sta misurando (diagnostica F1/Console)
         private bool wasConnected;
         private int debugTick;
 
@@ -62,12 +65,22 @@ namespace HapticResearch.Hands
         {
             latch = new GraspLatch<RecognizableShape>(minFingersClosed);
 
-            // grabPoint: riusa quello di HandGrabController se non assegnato.
-            if (grabPoint == null)
+            // Punta dell'indice della mano TRACCIATA di questo lato. E' il punto giusto da
+            // cui misurare: questo componente lavora solo col device connesso, quindi la
+            // mano che il partecipante muove davvero e' quella dei tracker. Misurare dal
+            // transform di QUESTO GameObject significherebbe misurare dalla mano del mouse,
+            // che resta ferma dove il cursore l'ha lasciata - tipicamente nella sua posizione
+            // di partenza, a pochi centimetri da una forma, che risulterebbe cosi' l'unica
+            // afferrabile per tutto il livello.
+            trackedTip = new FingerProbeSource
             {
-                var grab = GetComponent<HandGrabController>();
-                if (grab != null) grabPoint = grab.grabPoint;
-            }
+                RigFilter = FingerProbeSource.Rig.Tracked,
+                SideFilter = isLeftHand ? HandSideFlags.Left : HandSideFlags.Right,
+            };
+
+            // Ripiego storico, usato solo se la punta tracciata non c'e' (scene senza rig WEART).
+            var grab = GetComponent<HandGrabController>();
+            if (grab != null) fallbackPoint = grab.grabPoint;
 
             // Fallback thimble: se non assegnati, prende quelli sotto la mano (sono figli del rig
             // WEART, lato corretto in automatico). Esclude il palmo: conto solo le dita.
@@ -126,7 +139,7 @@ namespace HapticResearch.Hands
             if (!latch.SessionActive)
                 Debug.Log($"[GloveGrasp {Side}] in ascolto - dita chiuse: {closed}/{minFingersClosed} - {(latch.Armed ? "presa pronta" : "apri la mano per armare la presa")}");
             else if (latch.Held == null)
-                Debug.Log($"[GloveGrasp {Side}] mano chiusa ma nessuna forma entro {contactRadius} m dal grabPoint {(grabPoint != null ? grabPoint.position.ToString("0.00") : "(assente)")}");
+                Debug.Log($"[GloveGrasp {Side}] mano chiusa ma nessuna forma entro {contactRadius} m da {ProbeDescription()}");
         }
 
         // Riporta nel bridge il cambio di forma deciso dalla macchina a stati.
@@ -148,7 +161,15 @@ namespace HapticResearch.Hands
 
         // Espone lato e posizione del punto di presa per la diagnostica (GraspDebugPanel).
         public bool IsLeftHand => isLeftHand;
-        public Vector3? GrabPointPosition => grabPoint != null ? grabPoint.position : (Vector3?)null;
+        public Vector3? GrabPointPosition => TryProbePosition(out Vector3 p) ? p : (Vector3?)null;
+
+        // Da dove sta misurando questa mano, in chiaro: se qui compare "grabPoint" invece
+        // di "indice tracciato", il rig dei tracker non sta dando nessuna punta e la presa
+        // sta misurando dalla mano del mouse.
+        public string ProbeOrigin => probeOrigin;
+
+        private string ProbeDescription()
+            => TryProbePosition(out Vector3 p) ? $"{probeOrigin} {p.ToString("0.00")}" : "nessun punto di misura";
 
         private GameObject CurrentSlot() => isLeftHand ? bridge.LeftGrasped : bridge.RightGrasped;
 
@@ -173,12 +194,47 @@ namespace HapticResearch.Hands
             return n;
         }
 
+        // Da dove si misura, in ordine: punto forzato dall'Inspector, punta dell'indice
+        // tracciata, ripiego storico. Aggiorna probeOrigin per la diagnostica.
+        private bool TryProbePosition(out Vector3 point)
+        {
+            if (grabPoint != null)
+            {
+                point = grabPoint.position;
+                probeOrigin = "forzato";
+                return true;
+            }
+
+            // trackedTip e' null finche' Awake non e' girato: il pannello diagnostico legge
+            // anche i rilevatori su GameObject disattivati, dove Awake non viene chiamato.
+            if (trackedTip != null)
+            {
+                trackedTip.Refresh();
+                if (trackedTip.TryLowestTip(out point))
+                {
+                    probeOrigin = "indice tracciato";
+                    return true;
+                }
+            }
+
+            if (fallbackPoint != null)
+            {
+                point = fallbackPoint.position;
+                probeOrigin = "grabPoint (nessuna punta tracciata)";
+                return true;
+            }
+
+            point = default;
+            probeOrigin = "nessuno";
+            return false;
+        }
+
         private RecognizableShape FindShapeNearHand()
         {
-            if (grabPoint == null) return null;
-            var hits = Physics.OverlapSphere(grabPoint.position, contactRadius);
+            if (!TryProbePosition(out Vector3 probe)) return null;
+            var hits = Physics.OverlapSphere(probe, contactRadius);
 
-            // Sceglie la forma PIÙ VICINA al palmo, non la prima restituita dal physics
+            // Sceglie la forma PIÙ VICINA al dito, non la prima restituita dal physics
             // engine (ordine arbitrario): con più forme nel raggio prenderebbe a caso.
             RecognizableShape best = null;
             float bestDist = float.MaxValue;
@@ -186,7 +242,7 @@ namespace HapticResearch.Hands
             {
                 var rec = hits[i].GetComponentInParent<RecognizableShape>();
                 if (rec == null) continue;
-                float d = Vector3.Distance(grabPoint.position, hits[i].ClosestPoint(grabPoint.position));
+                float d = Vector3.Distance(probe, hits[i].ClosestPoint(probe));
                 if (d < bestDist)
                 {
                     bestDist = d;
